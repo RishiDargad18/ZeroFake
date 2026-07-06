@@ -1,3 +1,39 @@
 spring:
   application:
     name: auth-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zerofake_auth
+    username : postgres
+    password : rishi@zerofake
+    driver-class-name : org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql : true
+    properties:
+      hibernate:
+        format_sql : true
+  jackson:
+    time-zone: UTC
+server:
+  port: 8081
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+jwt:
+  secret: #
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+  issuer: zerofake-auth-sevice
