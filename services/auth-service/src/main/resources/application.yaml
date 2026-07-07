@@ -33,7 +33,7 @@ springdoc:
     path: /swagger-ui.html
 
 jwt:
-  secret: #
+  secret: ZmQ4NjQ4MzA0YTQ5M2RlMjQ4N2E4Y2I2NGE2MWU2ODUxZmY2YjQzZmE4MzQzMDAxYjNhY2Y2ZjY2MzRkM2Y2YQ==
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
-  issuer: zerofake-auth-sevice
+  issuer: zerofake-auth-service
