@@ -116,11 +116,13 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
+        ex.printStackTrace();   // <-- TEMPORARY
+
         ApiError error = ApiError.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("An unexpected error occurred.")
+                .message(ex.getMessage())   // <-- TEMPORARY
                 .path(request.getRequestURI())
                 .build();
 

@@ -1,4 +1,5 @@
 package com.zerofake.auth.service.impl;
+import com.zerofake.auth.exception.BadRequestException;
 import com.zerofake.auth.security.user.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -66,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public AuthResponse login(LoginRequest request) {
 
         authenticationManager.authenticate(
@@ -88,9 +90,10 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtService.generateAccessToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
-        refreshTokenRepository.deleteByUser(user);
+        RefreshToken token = refreshTokenRepository
+                .findByUser(user)
+                .orElse(new RefreshToken());
 
-        RefreshToken token = new RefreshToken();
         token.setUser(user);
         token.setToken(refreshToken);
         token.setExpiryDate(
@@ -120,23 +123,28 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken refreshToken = refreshTokenRepository
                 .findByToken(request.getRefreshToken())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Invalid refresh token.")
+                        new BadRequestException("Invalid refresh token.")
                 );
 
         if (Boolean.TRUE.equals(refreshToken.getRevoked())) {
-            throw new IllegalArgumentException("Refresh token has been revoked.");
+            throw new BadRequestException("Refresh token has been revoked.");
         }
 
         if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Refresh token has expired.");
+            throw new BadRequestException("Refresh token has expired.");
         }
 
         User user = refreshToken.getUser();
 
         UserDetails userDetails = new CustomUserDetails(user);
-
+        System.out.println("======================================");
+        System.out.println("DB Token      : " + refreshToken.getToken());
+        System.out.println("Request Token : " + request.getRefreshToken());
+        System.out.println("DB Email      : " + user.getEmail());
+        System.out.println("JWT Email     : " + jwtService.extractUsername(request.getRefreshToken()));
+        System.out.println("======================================");
         if (!jwtService.isTokenValid(request.getRefreshToken(), userDetails)) {
-            throw new IllegalArgumentException("Invalid refresh token.");
+            throw new IllegalArgumentException("JWT VALIDATION FAILED");
         }
 
         String accessToken = jwtService.generateAccessToken(userDetails);
