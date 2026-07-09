@@ -16,5 +16,5 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     List<Product> findByCategoryId(UUID categoryId);
 
     List<Product> findByManufacturerId(UUID manufacturerId);
-
+    List<Product> findByActiveTrue();
 }

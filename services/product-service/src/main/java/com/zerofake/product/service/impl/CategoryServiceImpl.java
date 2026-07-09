@@ -41,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryResponse> getAllCategories() {
-        return productCategoryRepository.findAll()
+        return productCategoryRepository.findByActiveTrue()
                 .stream()
                 .map(productCategoryMapper::toResponse)
                 .toList();
