@@ -9,6 +9,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
 
@@ -18,18 +19,26 @@ spring:
       hibernate:
         format_sql: true
 
+  jackson:
+    time-zone: UTC
+
 server:
   port: 8082
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+springdoc:
   api-docs:
     path: /api-docs
 
-logging:
-  level:
-    org.springframework: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
+  swagger-ui:
+    path: /swagger-ui.html
