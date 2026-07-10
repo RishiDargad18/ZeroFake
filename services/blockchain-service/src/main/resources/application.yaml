@@ -11,16 +11,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    open-in-view: false
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-        jdbc:
-          time_zone: UTC
-
-  jackson:
-    time-zone: UTC
 
 server:
   port: 8083
@@ -30,12 +24,17 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
-    operationsSorter: method
-    tagsSorter: alpha
 
-logging:
-  level:
-    root: INFO
-    org.springframework: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
+fabric:
+  msp-id: Org1MSP
+  channel-name: mychannel
+  chaincode-name: zerofake
+  crypto-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com
+
+  cert-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\User1@org1.example.com\msp\signcerts\cert.pem
+
+  key-directory-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\User1@org1.example.com\msp\keystore
+
+  tls-cert-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\peers\peer0.org1.example.com\tls\ca.crt
+  peer-endpoint: dns:///localhost:7051
+  peer-host-alias: peer0.org1.example.com

@@ -26,5 +26,4 @@ public class FabricProperties {
     private String peerEndpoint;
 
     private String peerHostAlias;
-
 }
