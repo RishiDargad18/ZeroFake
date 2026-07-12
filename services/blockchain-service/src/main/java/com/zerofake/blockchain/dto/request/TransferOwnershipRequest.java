@@ -1,5 +1,6 @@
 package com.zerofake.blockchain.dto.request;
 
+import com.zerofake.blockchain.constant.OwnerRole;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,4 +26,6 @@ public class TransferOwnershipRequest {
     @NotNull(message = "New owner ID is required.")
     private UUID toOwnerId;
 
+    @NotNull(message = "New owner role is required.")
+    private OwnerRole toOwnerRole;
 }
