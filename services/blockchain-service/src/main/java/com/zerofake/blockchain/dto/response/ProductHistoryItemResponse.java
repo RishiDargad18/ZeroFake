@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -14,10 +13,20 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProductHistoryResponse {
+public class ProductHistoryItemResponse {
 
-    private UUID productId;
+    private UUID manufacturerId;
 
-    private List<ProductHistoryItemResponse> history;
+    private UUID currentOwnerId;
+
+    private String currentOwnerRole;
+
+    private String productStatus;
+
+    private Boolean verified;
+
+    private String createdAt;
+
+    private String updatedAt;
 
 }

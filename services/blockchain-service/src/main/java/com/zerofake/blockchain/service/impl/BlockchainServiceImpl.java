@@ -20,7 +20,12 @@ import lombok.RequiredArgsConstructor;
 import org.hyperledger.fabric.client.Proposal;
 import org.hyperledger.fabric.client.Transaction;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.zerofake.blockchain.dto.response.ProductHistoryItemResponse;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,11 +41,6 @@ public class BlockchainServiceImpl implements BlockchainService {
     private final FabricContractService fabricContractService;
 
     private final ObjectMapper objectMapper;
-
-    @Override
-    public ProductHistoryResponse getProductHistory(UUID productId) {
-        throw new UnsupportedOperationException("Will be implemented during Hyperledger Fabric integration.");
-    }
 
     @Override
     public BlockchainTransactionResponse getTransactionByTransactionId(String transactionId) {
@@ -191,6 +191,50 @@ public class BlockchainServiceImpl implements BlockchainService {
         } catch (Exception exception) {
             throw new RuntimeException(
                     "Failed to verify product on Hyperledger Fabric.",
+                    exception
+            );
+        }
+    }
+    @Override
+    public ProductHistoryResponse getProductHistory(UUID productId) {
+
+        try {
+            Proposal proposal = fabricContractService
+                    .newProposal("GetProductHistory")
+                    .addArguments(productId.toString())
+                    .build();
+
+            Transaction transaction = proposal.endorse();
+
+            byte[] result = transaction.submit();
+
+            JsonNode historyArray = objectMapper.readTree(result);
+
+            List<ProductHistoryItemResponse> historyItems = new ArrayList<>();
+
+            for (JsonNode product : historyArray) {
+
+                ProductHistoryItemResponse historyItem = ProductHistoryItemResponse.builder()
+                        .manufacturerId(UUID.fromString(product.get("manufacturerId").asText()))
+                        .currentOwnerId(UUID.fromString(product.get("currentOwnerId").asText()))
+                        .currentOwnerRole(product.get("currentOwnerRole").asText())
+                        .productStatus(product.get("productStatus").asText())
+                        .verified(product.get("isVerified").asBoolean())
+                        .createdAt(product.get("createdAt").asText())
+                        .updatedAt(product.get("updatedAt").asText())
+                        .build();
+
+                historyItems.add(historyItem);
+            }
+
+            return ProductHistoryResponse.builder()
+                    .productId(productId)
+                    .history(historyItems)
+                    .build();
+
+        } catch (Exception exception) {
+            throw new RuntimeException(
+                    "Failed to retrieve product history from Hyperledger Fabric.",
                     exception
             );
         }
