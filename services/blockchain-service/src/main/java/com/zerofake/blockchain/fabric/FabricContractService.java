@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.hyperledger.fabric.client.Contract;
 import org.hyperledger.fabric.client.Gateway;
 import org.hyperledger.fabric.client.Network;
+import org.hyperledger.fabric.client.Proposal;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -34,5 +35,14 @@ public class FabricContractService {
         );
 
         return contract;
+    }
+
+    /**
+     * Creates a proposal for the specified chaincode transaction.
+     * The caller is responsible for adding arguments, endorsing,
+     * submitting, and obtaining the Fabric transaction ID.
+     */
+    public Proposal.Builder newProposal(String transactionName) throws Exception {
+        return getContract().newProposal(transactionName);
     }
 }

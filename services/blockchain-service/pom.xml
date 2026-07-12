@@ -65,7 +65,17 @@
 			<artifactId>fabric-gateway</artifactId>
 			<version>1.11.0</version>
 		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>4.34.1</version>
+		</dependency>
 
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java-util</artifactId>
+			<version>4.34.1</version>
+		</dependency>
 		<!-- PostgreSQL -->
 		<dependency>
 			<groupId>org.postgresql</groupId>

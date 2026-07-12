@@ -38,10 +38,10 @@ public class BlockchainTransaction extends BaseEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String transactionId;
 
-    @Column(nullable = false)
+    @Column
     private Long blockNumber;
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String blockHash;
 
     @Enumerated(EnumType.STRING)

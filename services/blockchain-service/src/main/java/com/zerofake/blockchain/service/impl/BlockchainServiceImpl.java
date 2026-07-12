@@ -14,7 +14,12 @@ import com.zerofake.blockchain.repository.BlockchainTransactionRepository;
 import com.zerofake.blockchain.service.BlockchainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zerofake.blockchain.entity.BlockchainTransaction;
+import com.zerofake.blockchain.fabric.FabricContractService;
+import org.hyperledger.fabric.client.Proposal;
+import org.hyperledger.fabric.client.Transaction;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,14 +27,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BlockchainServiceImpl implements BlockchainService {
 
+
     private final BlockchainTransactionRepository blockchainTransactionRepository;
 
     private final BlockchainTransactionMapper blockchainTransactionMapper;
 
-    @Override
-    public BlockchainTransactionResponse registerProduct(RegisterProductRequest request) {
-        throw new UnsupportedOperationException("Will be implemented during Hyperledger Fabric integration.");
-    }
+    private final FabricContractService fabricContractService;
+
+    private final ObjectMapper objectMapper;
+
 
     @Override
     public BlockchainTransactionResponse transferOwnership(TransferOwnershipRequest request) {
@@ -80,5 +86,47 @@ public class BlockchainServiceImpl implements BlockchainService {
                 blockchainTransactionRepository.findByTransactionType(transactionType)
         );
     }
+    @Override
+    public BlockchainTransactionResponse registerProduct(RegisterProductRequest request) {
 
+        try {
+            Proposal proposal = fabricContractService
+                    .newProposal("RegisterProduct")
+                    .addArguments(
+                            request.getProductId().toString(),
+                            request.getManufacturerId().toString()
+                    )
+                    .build();
+
+            Transaction transaction = proposal.endorse();
+
+            byte[] result = transaction.submit();
+
+            String transactionId = transaction.getTransactionId();
+
+            JsonNode productAsset = objectMapper.readTree(result);
+
+            BlockchainTransaction blockchainTransaction = BlockchainTransaction.builder()
+                    .productId(request.getProductId())
+                    .transactionId(transactionId)
+                    .transactionType(TransactionType.PRODUCT_REGISTERED)
+                    .performedBy(request.getManufacturerId())
+                    .status(BlockchainStatus.SUCCESS)
+                    .message("Product registered successfully on blockchain.")
+                    .blockNumber(null)
+                    .blockHash(null)
+                    .build();
+
+            BlockchainTransaction savedTransaction =
+                    blockchainTransactionRepository.save(blockchainTransaction);
+
+            return blockchainTransactionMapper.toResponse(savedTransaction);
+
+        } catch (Exception exception) {
+            throw new RuntimeException(
+                    "Failed to register product on Hyperledger Fabric.",
+                    exception
+            );
+        }
+    }
 }

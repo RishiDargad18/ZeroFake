@@ -45,7 +45,10 @@ func (p *ProductContract) RegisterProduct(
 		return nil, fmt.Errorf("product with ID '%s' already exists", productID)
 	}
 
-	currentTimestamp := util.CurrentTimestamp()
+	currentTimestamp, err := util.CurrentTimestamp(ctx)
+    if err != nil {
+        return nil, err
+    }
 
 	product := &model.ProductAsset{
 		ProductID:        productID,
@@ -156,7 +159,12 @@ func (p *ProductContract) TransferOwnership(
 
 	product.CurrentOwnerID = newOwnerID
 	product.CurrentOwnerRole = role
-	product.UpdatedAt = util.CurrentTimestamp()
+	updatedTimestamp, err := util.CurrentTimestamp(ctx)
+    if err != nil {
+        return nil, err
+    }
+
+    product.UpdatedAt = updatedTimestamp
 
 	switch role {
 	case constant.OwnerRoleManufacturer:

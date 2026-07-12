@@ -96,6 +96,9 @@ public class GlobalExceptionHandler {
             Exception exception,
             HttpServletRequest request
     ) {
+
+        exception.printStackTrace();
+
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 exception.getMessage(),
