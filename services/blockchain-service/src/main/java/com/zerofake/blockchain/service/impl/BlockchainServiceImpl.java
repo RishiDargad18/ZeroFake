@@ -37,12 +37,6 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     private final ObjectMapper objectMapper;
 
-
-    @Override
-    public VerificationResponse verifyProduct(VerifyProductRequest request) {
-        throw new UnsupportedOperationException("Will be implemented during Hyperledger Fabric integration.");
-    }
-
     @Override
     public ProductHistoryResponse getProductHistory(UUID productId) {
         throw new UnsupportedOperationException("Will be implemented during Hyperledger Fabric integration.");
@@ -166,6 +160,37 @@ public class BlockchainServiceImpl implements BlockchainService {
         } catch (Exception exception) {
             throw new RuntimeException(
                     "Failed to transfer ownership on Hyperledger Fabric.",
+                    exception
+            );
+        }
+    }
+    @Override
+    public VerificationResponse verifyProduct(VerifyProductRequest request) {
+
+        try {
+            Proposal proposal = fabricContractService
+                    .newProposal("VerifyProduct")
+                    .addArguments(
+                            request.getProductId().toString()
+                    )
+                    .build();
+
+            Transaction transaction = proposal.endorse();
+
+            byte[] result = transaction.submit();
+
+            JsonNode productAsset = objectMapper.readTree(result);
+
+            return VerificationResponse.builder()
+                    .productId(request.getProductId())
+                    .authentic(productAsset.path("isVerified").asBoolean())
+                    .message("Product verification completed successfully.")
+                    .transactionId(transaction.getTransactionId())
+                    .build();
+
+        } catch (Exception exception) {
+            throw new RuntimeException(
+                    "Failed to verify product on Hyperledger Fabric.",
                     exception
             );
         }
