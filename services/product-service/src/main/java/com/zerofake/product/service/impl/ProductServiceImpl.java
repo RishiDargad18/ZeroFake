@@ -1,5 +1,5 @@
 package com.zerofake.product.service.impl;
-
+import org.springframework.transaction.annotation.Transactional;
 import com.zerofake.product.dto.request.CreateProductRequest;
 import com.zerofake.product.dto.request.UpdateProductRequest;
 import com.zerofake.product.dto.response.ProductResponse;
@@ -48,6 +48,7 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toResponse(savedProduct);
     }
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAllProducts() {
 
         return productRepository.findByActiveTrue()
@@ -56,6 +57,7 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
     }
     @Override
+    @Transactional(readOnly = true)
     public ProductResponse getProductById(UUID id) {
 
         Product product = productRepository.findById(id)
@@ -116,6 +118,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getProductsByCategory(UUID categoryId) {
         return productRepository.findByCategoryId(categoryId)
                 .stream()
@@ -123,6 +126,7 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
     }
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getProductsByManufacturer(UUID manufacturerId) {
         return productRepository.findByManufacturerId(manufacturerId)
                 .stream()
