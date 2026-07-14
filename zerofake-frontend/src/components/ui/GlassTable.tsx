@@ -33,6 +33,7 @@ export default function GlassTable<T>({
   onRowClick,
   className,
 }: GlassTableProps<T>) {
+  
   if (loading) {
     return (
       <GlassCard className="flex min-h-[300px] items-center justify-center">

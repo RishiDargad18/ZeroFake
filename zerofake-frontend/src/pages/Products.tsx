@@ -1,3 +1,7 @@
+import type {
+  OwnerRole,
+  TransferOwnershipRequest,
+} from "@/types/blockchain";
 import {
   useEffect,
   useMemo,
@@ -24,9 +28,10 @@ import { useDeleteProduct } from "@/hooks/useDeleteProduct";
 import ProductForm from "@/components/product/ProductForm";
 import type { UpdateProductRequest } from "@/types/product";
 import { useCreateProduct } from "@/hooks/useCreateProduct";
-
+import { useBlockchain } from "@/hooks/useBlockchain";
 import type { CreateProductRequest } from "@/types/product";
-
+import { useBlockchainHistory } from "@/hooks/useBlockchainHistory";
+import { useOwnershipTransfer } from "@/hooks/useOwnershipTransfer";
 import {
   EmptyState,
   GlassBadge,
@@ -34,6 +39,7 @@ import {
   GlassCard,
   GlassInput,
   GlassLoader,
+  GlassSelect,
   GlassTable,
 } from "@/components/ui";
 
@@ -99,6 +105,22 @@ const {
   isUpdating,
 } = useUpdateProduct();
 
+const {
+  registerProduct,
+  isRegistering,
+} = useBlockchain();
+
+const {
+  transferOwnership,
+  isTransferring,
+} = useOwnershipTransfer();
+
+const {
+  history,
+  isLoading: historyLoading,
+  loadHistory,
+} = useBlockchainHistory();
+
 const [showEditModal, setShowEditModal] =
   useState(false);
 
@@ -128,6 +150,23 @@ const closeEditModal = () => {
   setShowEditModal(false);
   setProductToEdit(null);
 };
+
+const openTransferModal = (
+  product: ProductResponse
+) => {
+  closeProduct();
+  setProductToTransfer(product);
+  setShowTransferModal(true);
+};
+
+const closeTransferModal = () => {
+  setShowTransferModal(false);
+  setProductToTransfer(null);
+
+  setNewOwnerId("");
+  setNewOwnerRole("");
+};
+
 const handleDeleteProduct = async () => {
   if (!productToDelete) {
     return;
@@ -153,7 +192,6 @@ const handleUpdateProduct = async (
   if (!productToEdit) {
     return;
   }
-
   const request: UpdateProductRequest = {
     ...data,
     imageUrl: productToEdit.imageUrl,
@@ -180,7 +218,80 @@ const handleUpdateProduct = async (
     toast.error(getApiError(error));
   }
 };
+const handleRegisterBlockchain = async (
+  product: ProductResponse
+) => {
+  try {
+    await registerProduct({
+      productId: product.id,
+      manufacturerId:
+        product.manufacturerId,
+    });
 
+    toast.success(
+      "Product registered on blockchain successfully."
+    );
+
+    await refresh();
+
+    closeProduct();
+  } catch (error) {
+    toast.error(getApiError(error));
+  }
+};
+const handleTransferOwnership =
+  async () => {
+    if (!productToTransfer) {
+      return;
+    }
+    if (
+  newOwnerId.trim() === "" ||
+  newOwnerRole === ""
+) {
+  toast.error(
+    "Please complete all required fields."
+  );
+  return;
+}
+
+    const request: TransferOwnershipRequest =
+      {
+        productId:
+          productToTransfer.id,
+
+        fromOwnerId:
+  history?.history.length
+    ? history.history[history.history.length - 1].currentOwnerId
+    : productToTransfer.manufacturerId,
+
+        toOwnerId: newOwnerId,
+
+        toOwnerRole:
+          newOwnerRole,
+      };
+
+    try {
+      await transferOwnership(request);
+
+      toast.success(
+        "Ownership transferred successfully."
+      );
+
+      await refresh();
+
+      if (selectedProduct) {
+        await loadHistory(
+          selectedProduct.id
+        );
+      }
+
+      closeTransferModal();
+    } catch (error) {
+      toast.error(
+        getApiError(error)
+      );
+    }
+  };
 const {
   categories,
   isLoading: categoriesLoading,
@@ -208,12 +319,29 @@ const openCreateModal = () => {
 const closeCreateModal = () => {
   setShowCreateModal(false);
 };
+const [newOwnerId, setNewOwnerId] =
+  useState("");
 
+const [newOwnerRole, setNewOwnerRole] =
+  useState<OwnerRole | "">("");
+
+  const [showTransferModal, setShowTransferModal] =
+  useState(false);
+
+const [productToTransfer, setProductToTransfer] =
+  useState<ProductResponse | null>(null);
 useEffect(() => {
   if (error) {
     toast.error(getApiError(error));
   }
 }, [error]);
+useEffect(() => {
+  if (!selectedProduct) {
+    return;
+  }
+
+  void loadHistory(selectedProduct.id);
+}, [selectedProduct, loadHistory]);
 
 useEffect(() => {
   if (!categoriesLoading && categories.length === 0) {
@@ -227,7 +355,6 @@ useEffect(() => {
   if (!showCreateModal) {
     return;
   }
-
   const handleEscape = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       closeCreateModal();
@@ -245,6 +372,25 @@ useEffect(() => {
       handleEscape
     );
 }, [showCreateModal]);
+
+useEffect(() => {
+  if (!showEditModal) {
+    return;
+  }
+
+  const handleEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeEditModal();
+    }
+  };
+  
+  window.addEventListener("keydown", handleEscape);
+
+  return () => {
+    window.removeEventListener("keydown", handleEscape);
+  };
+}, [showEditModal]);
+
 const handleCreateProduct = async (
   data: CreateProductRequest
 ) => {
@@ -262,7 +408,31 @@ const handleCreateProduct = async (
     toast.error(getApiError(error));
   }
 };
-
+  const ownerRoleOptions = useMemo(
+  () => [
+    {
+      label: "Manufacturer",
+      value: "MANUFACTURER",
+    },
+    {
+      label: "Warehouse",
+      value: "WAREHOUSE",
+    },
+    {
+      label: "Distributor",
+      value: "DISTRIBUTOR",
+    },
+    {
+      label: "Retailer",
+      value: "RETAILER",
+    },
+    {
+      label: "Customer",
+      value: "CUSTOMER",
+    },
+  ],
+  []
+);
   const columns = useMemo<
     GlassTableColumn<ProductResponse>[]
   >(
@@ -293,7 +463,7 @@ const handleCreateProduct = async (
         cell: (product) => (
             <GlassBadge
             variant={
-                product.blockchainStatus === "REGISTERED"
+                product.blockchainStatus === "SUCCESS"
                 ? "success"
                 : product.blockchainStatus === "FAILED"
                 ? "danger"
@@ -527,12 +697,22 @@ const editInitialValues =
     </motion.div>
   )}
 </AnimatePresence>
-      <ProductDetailsDrawer
+<ProductDetailsDrawer
   product={selectedProduct}
   open={selectedProduct !== null}
   onClose={closeProduct}
   onEdit={openEditModal}
   onDelete={openDeleteDialog}
+  onRegisterBlockchain={handleRegisterBlockchain}
+  onTransferOwnership={openTransferModal}
+  isRegistering={isRegistering}
+  isTransferring={isTransferring}
+  history={
+    selectedProduct
+      ? history
+      : null
+  }
+  historyLoading={historyLoading}
 />
         <ConfirmDialog
   open={showDeleteDialog}
@@ -546,6 +726,116 @@ const editInitialValues =
 }}
   onCancel={closeDeleteDialog}
 />
+<AnimatePresence>
+  {showTransferModal &&
+    productToTransfer && (
+      <motion.div
+        className="
+          fixed
+          inset-0
+          z-50
+          flex
+          items-center
+          justify-center
+          bg-black/60
+          p-4
+          backdrop-blur-md
+        "
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={closeTransferModal}
+      >
+        <motion.div
+          className="w-full max-w-lg"
+          initial={{
+            scale: 0.95,
+            opacity: 0,
+          }}
+          animate={{
+            scale: 1,
+            opacity: 1,
+          }}
+          exit={{
+            scale: 0.95,
+            opacity: 0,
+          }}
+          transition={{
+            duration: 0.2,
+          }}
+          onClick={(event) =>
+            event.stopPropagation()
+          }
+        >
+          <GlassCard>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold">
+                  Transfer Ownership
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-400">
+                  Transfer this product to the
+                  next owner
+                </p>
+              </div>
+
+              <GlassInput
+                label="New Owner ID"
+                placeholder="Enter new owner ID"
+                value={newOwnerId}
+                onChange={(event) =>
+                  setNewOwnerId(
+                    event.target.value
+                  )
+                }
+                disabled={isTransferring}
+              />
+
+              <GlassSelect
+                label="Owner Role"
+                options={ownerRoleOptions}
+                value={newOwnerRole}
+                onChange={(event) =>
+                  setNewOwnerRole(
+                    event.target
+                      .value as OwnerRole
+                  )
+                }
+                disabled={isTransferring}
+              />
+
+              <div className="flex justify-end gap-3">
+                <GlassButton
+                  variant="secondary"
+                  onClick={
+                    closeTransferModal
+                  }
+                  disabled={isTransferring}
+                >
+                  Cancel
+                </GlassButton>
+
+                <GlassButton
+                  loading={isTransferring}
+                  disabled={
+  isTransferring ||
+  newOwnerId.trim() === "" ||
+  newOwnerRole === ""
+}
+                  onClick={() => {
+                    void handleTransferOwnership();
+                  }}
+                >
+                  Transfer
+                </GlassButton>
+              </div>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </motion.div>
+    )}
+</AnimatePresence>
         <AnimatePresence>
   {showCreateModal && (
     <>

@@ -9,7 +9,7 @@ export interface CategoryResponse {
 
 export type BlockchainStatus =
   | "PENDING"
-  | "REGISTERED"
+  | "SUCCESS"
   | "FAILED";
 
 export interface ProductResponse {

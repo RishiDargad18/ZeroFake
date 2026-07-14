@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-
+import type {
+  ProductHistoryResponse,
+} from "@/types/blockchain";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Calendar,
@@ -11,9 +13,11 @@ import {
 } from "lucide-react";
 
 import {
+  EmptyState,
   GlassBadge,
   GlassButton,
   GlassCard,
+  GlassLoader,
 } from "@/components/ui";
 
 import type { ProductResponse } from "@/types/product";
@@ -22,10 +26,27 @@ interface ProductDetailsDrawerProps {
   product: ProductResponse | null;
   open: boolean;
   onClose: () => void;
-  onEdit: (product: ProductResponse) => void;
-  onDelete: (product: ProductResponse) => void;
-}
 
+  onEdit: (product: ProductResponse) => void;
+
+  onDelete: (product: ProductResponse) => void;
+
+  onRegisterBlockchain: (
+    product: ProductResponse
+  ) => void;
+
+  onTransferOwnership: (
+    product: ProductResponse
+  ) => void;
+
+  isRegistering?: boolean;
+
+  isTransferring?: boolean;
+
+  history: ProductHistoryResponse | null;
+
+  historyLoading: boolean;
+}
 function DetailRow({
   label,
   value,
@@ -68,6 +89,12 @@ export default function ProductDetailsDrawer({
   onClose,
   onEdit,
   onDelete,
+  onRegisterBlockchain,
+  onTransferOwnership,
+  isRegistering = false,
+  isTransferring = false,
+  history,
+  historyLoading,
 }: ProductDetailsDrawerProps) {
   useEffect(() => {
     const handleEscape = (
@@ -233,7 +260,7 @@ export default function ProductDetailsDrawer({
                     <GlassBadge
                       variant={
                         product.blockchainStatus ===
-                        "REGISTERED"
+                        "SUCCESS"
                           ? "success"
                           : product.blockchainStatus ===
                             "FAILED"
@@ -307,9 +334,98 @@ export default function ProductDetailsDrawer({
                   </p>
                 </div>
               </GlassCard>
+              <GlassCard className="mt-6">
+  <div className="mb-6">
+    <h3 className="text-lg font-semibold">
+      Blockchain History
+    </h3>
+
+    <p className="mt-1 text-sm text-gray-400">
+      Product transaction history
+    </p>
+  </div>
+
+  {historyLoading ? (
+    <GlassLoader message="Loading blockchain history..." />
+  ) : !history ||
+    history.history.length === 0 ? (
+    <EmptyState
+      title="No History"
+      description="No blockchain transactions found."
+      icon={<Package size={48} />}
+    />
+  ) : (
+    <div className="space-y-4">
+      {history.history.map(
+        (transaction, index) => (
+          <div
+            key={index}
+            className="
+              rounded-xl
+              border
+              border-white/10
+              bg-white/5
+              p-4
+            "
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold">
+                {transaction.productStatus}
+              </h4>
+
+              <GlassBadge
+                variant={
+                  transaction.verified
+                    ? "success"
+                    : "warning"
+                }
+              >
+                {transaction.verified
+                  ? "VERIFIED"
+                  : "PENDING"}
+              </GlassBadge>
+            </div>
+
+            <div className="mt-3 space-y-2 text-sm text-gray-300">
+              <p>
+                <span className="font-medium">
+                  Manufacturer:
+                </span>{" "}
+                {transaction.manufacturerId}
+              </p>
+
+              <p>
+                <span className="font-medium">
+                  Owner:
+                </span>{" "}
+                {transaction.currentOwnerId}
+              </p>
+
+              <p>
+                <span className="font-medium">
+                  Role:
+                </span>{" "}
+                {transaction.currentOwnerRole}
+              </p>
+
+              <p>
+                <span className="font-medium">
+                  Updated:
+                </span>{" "}
+                {new Date(
+                  transaction.updatedAt
+                ).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  )}
+</GlassCard>
                   </div>
 
-      <div
+  <div
   className="
     flex
     flex-wrap
@@ -321,8 +437,27 @@ export default function ProductDetailsDrawer({
     p-6
   "
 >
+  {product.blockchainStatus === "SUCCESS" && (
+    <GlassButton
+      loading={isTransferring}
+      disabled={isTransferring}
+      onClick={() => onTransferOwnership(product)}
+    >
+      Transfer Ownership
+    </GlassButton>
+  )}
+
+  {product.blockchainStatus === "PENDING" && (
+    <GlassButton
+      loading={isRegistering}
+      disabled={isRegistering}
+      onClick={() => onRegisterBlockchain(product)}
+    >
+      Register on Blockchain
+    </GlassButton>
+  )}
+
   <GlassButton
-    variant="primary"
     onClick={() => onEdit(product)}
   >
     Edit Product

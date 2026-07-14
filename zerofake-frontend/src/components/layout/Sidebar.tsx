@@ -1,69 +1,30 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Boxes,
-  LayoutDashboard,
-  Package,
   ShieldCheck,
-  AlertTriangle,
-  GitBranch,
-  Settings,
   X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { navigationItems } from "@/constants/navigation";
 
+import { useAuth } from "@/hooks/useAuth";
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface NavigationItem {
-  label: string;
-  path: string;
-  icon: React.ElementType;
-}
-
-const navigationItems: NavigationItem[] = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Products",
-    path: "/products",
-    icon: Package,
-  },
-  {
-    label: "Blockchain",
-    path: "/blockchain",
-    icon: Boxes,
-  },
-  {
-    label: "Verify Product",
-    path: "/verify",
-    icon: ShieldCheck,
-  },
-  {
-    label: "Fraud Reports",
-    path: "/fraud",
-    icon: AlertTriangle,
-  },
-  {
-    label: "Product Timeline",
-    path: "/timeline",
-    icon: GitBranch,
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: Settings,
-  },
-];
-
 export default function Sidebar({
   isOpen,
   onClose,
 }: SidebarProps) {
+  const { user } = useAuth();
+
+const visibleNavigationItems =
+  navigationItems.filter((item) =>
+    user
+      ? item.roles.includes(user.role)
+      : false
+  );
+
   const sidebarContent = (
     <aside
       className="
@@ -137,7 +98,7 @@ export default function Sidebar({
       {/* Navigation */}
 
       <nav className="flex-1 space-y-2 p-4">
-        {navigationItems.map((item) => {
+        {visibleNavigationItems.map((item) => {
           const Icon = item.icon;
 
           return (

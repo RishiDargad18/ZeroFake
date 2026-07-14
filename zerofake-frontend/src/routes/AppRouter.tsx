@@ -4,84 +4,168 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
-import Products from "@/pages/Products";
-import Dashboard from "@/pages/Dashboard";
-import PagePlaceholder from "@/components/ui/PagePlaceholder";
+
 import AppLayout from "@/layouts/AppLayout";
+
+import Dashboard from "@/pages/Dashboard";
+import FraudReports from "@/pages/FraudReports";
+import Login from "@/pages/Login";
+import PagePlaceholder from "@/components/ui/PagePlaceholder";
+import Products from "@/pages/Products";
+import VerifyProduct from "@/pages/VerifyProduct";
+
+import ProtectedRoute from "@/routes/ProtectedRoute";
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout />}>
-          <Route
-            index
-            element={<Navigate to="/dashboard" replace />}
-          />
-
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
-
-          <Route
-          path="/products"
-          element={<Products />}
+        <Route
+          path="/login"
+          element={<Login />}
         />
 
+        <Route element={<AppLayout />}>
+        
           <Route
-            path="/blockchain"
+            index
             element={
-              <PagePlaceholder
-                title="Blockchain"
-                description="Blockchain operations will be implemented in a future milestone."
+              <Navigate
+                to="/dashboard"
+                replace
               />
             }
           />
 
-          <Route
-            path="/verify"
-            element={
-              <PagePlaceholder
-                title="Verify Product"
-                description="Product verification UI will be implemented in a future milestone."
-              />
-            }
-          />
+<Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+        "ROLE_MANUFACTURER",
+        "ROLE_WAREHOUSE",
+        "ROLE_DISTRIBUTOR",
+        "ROLE_RETAILER",
+        "ROLE_CUSTOMER",
+      ]}
+    >
+      <Dashboard />
+    </ProtectedRoute>
+  }
+/>
 
           <Route
-            path="/fraud"
-            element={
-              <PagePlaceholder
-                title="Fraud Reports"
-                description="Fraud reporting will be implemented in a future milestone."
-              />
-            }
-          />
+  path="/products"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+        "ROLE_MANUFACTURER",
+      ]}
+    >
+      <Products />
+    </ProtectedRoute>
+  }
+/>
 
-          <Route
-            path="/timeline"
-            element={
-              <PagePlaceholder
-                title="Product Timeline"
-                description="Animated blockchain ownership timeline will be implemented in a future milestone."
-              />
-            }
-          />
+     <Route
+  path="/blockchain"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+        "ROLE_MANUFACTURER",
+      ]}
+    >
+      <PagePlaceholder
+        title="Blockchain"
+        description="Blockchain operations will be implemented in a future milestone."
+      />
+    </ProtectedRoute>
+  }
+/>
 
-          <Route
-            path="/settings"
-            element={
-              <PagePlaceholder
-                title="Settings"
-                description="Settings page will be implemented in a future milestone."
-              />
-            }
-          />
+<Route
+  path="/verify"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+        "ROLE_MANUFACTURER",
+        "ROLE_WAREHOUSE",
+        "ROLE_DISTRIBUTOR",
+        "ROLE_RETAILER",
+        "ROLE_CUSTOMER",
+      ]}
+    >
+      <VerifyProduct />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/fraud"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+      ]}
+    >
+      <FraudReports />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/timeline"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+        "ROLE_MANUFACTURER",
+        "ROLE_WAREHOUSE",
+        "ROLE_DISTRIBUTOR",
+        "ROLE_RETAILER",
+        "ROLE_CUSTOMER",
+      ]}
+    >
+      <PagePlaceholder
+        title="Product Timeline"
+        description="Animated blockchain ownership timeline will be implemented in a future milestone."
+      />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ROLE_ADMIN",
+        "ROLE_MANUFACTURER",
+        "ROLE_WAREHOUSE",
+        "ROLE_DISTRIBUTOR",
+        "ROLE_RETAILER",
+        "ROLE_CUSTOMER",
+      ]}
+    >
+      <PagePlaceholder
+        title="Settings"
+        description="Settings page will be implemented in a future milestone."
+      />
+    </ProtectedRoute>
+  }
+/>
 
           <Route
             path="*"
-            element={<Navigate to="/dashboard" replace />}
+            element={
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            }
           />
         </Route>
       </Routes>
