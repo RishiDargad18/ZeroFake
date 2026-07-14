@@ -6,10 +6,7 @@ import {
 
 import { cn } from "../../utils/cn";
 
-export interface SelectOption {
-  label: string;
-  value: string;
-}
+import type { SelectOption } from "@/types/common";
 
 export interface GlassSelectProps
   extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -82,9 +79,9 @@ const GlassSelect = forwardRef<
             {...props}
           >
             {placeholder && (
-              <option value="" disabled hidden>
-                {placeholder}
-              </option>
+              <option value="" disabled>
+              {placeholder}
+            </option>
             )}
 
             {options.map((option) => (

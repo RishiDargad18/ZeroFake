@@ -11,3 +11,4 @@ export { default as GlassTextarea } from "./GlassTextarea";
 export { default as LoadingOverlay } from "./LoadingOverlay";
 export { default as PagePlaceholder } from "./PagePlaceholder";
 export { default as ThemeToggle } from "./ThemeToggle";
+export { default as GlassTable } from "./GlassTable";

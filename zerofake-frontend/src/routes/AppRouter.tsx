@@ -4,7 +4,7 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
-
+import Products from "@/pages/Products";
 import Dashboard from "@/pages/Dashboard";
 import PagePlaceholder from "@/components/ui/PagePlaceholder";
 import AppLayout from "@/layouts/AppLayout";
@@ -25,14 +25,9 @@ export default function AppRouter() {
           />
 
           <Route
-            path="/products"
-            element={
-              <PagePlaceholder
-                title="Products"
-                description="Product Management will be implemented in a future milestone."
-              />
-            }
-          />
+          path="/products"
+          element={<Products />}
+        />
 
           <Route
             path="/blockchain"
