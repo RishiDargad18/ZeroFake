@@ -133,4 +133,15 @@ public class ProductServiceImpl implements ProductService {
                 .map(productMapper::toResponse)
                 .toList();
     }
+
+    @Override
+    @Transactional
+    public ProductResponse updateBlockchainStatus(UUID id, String status) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Product not found with id: " + id));
+        product.setBlockchainStatus(com.zerofake.product.constant.BlockchainStatus.valueOf(status.toUpperCase()));
+        Product savedProduct = productRepository.save(product);
+        return productMapper.toResponse(savedProduct);
+    }
 }

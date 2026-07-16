@@ -16,16 +16,14 @@ import com.zerofake.blockchain.fabric.FabricContractService;
 import com.zerofake.blockchain.mapper.BlockchainTransactionMapper;
 import com.zerofake.blockchain.repository.BlockchainTransactionRepository;
 import com.zerofake.blockchain.service.BlockchainService;
+import com.zerofake.blockchain.dto.response.ProductHistoryItemResponse;
 import lombok.RequiredArgsConstructor;
+import org.hyperledger.fabric.client.Contract;
 import org.hyperledger.fabric.client.Proposal;
 import org.hyperledger.fabric.client.Transaction;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.zerofake.blockchain.dto.response.ProductHistoryItemResponse;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,6 +75,13 @@ public class BlockchainServiceImpl implements BlockchainService {
         );
     }
     @Override
+    public List<BlockchainTransactionResponse> getAllTransactions() {
+
+        return blockchainTransactionMapper.toResponseList(
+                blockchainTransactionRepository.findAll()
+        );
+    }
+    @Override
     public BlockchainTransactionResponse registerProduct(RegisterProductRequest request) {
 
         try {
@@ -113,6 +118,81 @@ public class BlockchainServiceImpl implements BlockchainService {
             return blockchainTransactionMapper.toResponse(savedTransaction);
 
         } catch (Exception exception) {
+            // Walk the entire exception chain to find "already exists"
+            boolean alreadyExists = false;
+            Throwable t = exception;
+            while (t != null) {
+                String msg = t.getMessage();
+                if (msg != null && msg.toLowerCase().contains("already exists")) {
+                    alreadyExists = true;
+                    break;
+                }
+                // Also check suppressed exceptions
+                for (Throwable suppressed : t.getSuppressed()) {
+                    String sMsg = suppressed.getMessage();
+                    if (sMsg != null && sMsg.toLowerCase().contains("already exists")) {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+                if (alreadyExists) break;
+                t = t.getCause();
+            }
+
+            // For EndorseException, also check getDetails() if available
+            if (!alreadyExists && exception instanceof org.hyperledger.fabric.client.EndorseException endorseEx) {
+                for (var detail : endorseEx.getDetails()) {
+                    if (detail.toString().toLowerCase().contains("already exists")) {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+            }
+            // Check cause for EndorseException too
+            if (!alreadyExists) {
+                Throwable c = exception.getCause();
+                while (c != null) {
+                    if (c instanceof org.hyperledger.fabric.client.EndorseException endorseEx2) {
+                        for (var detail : endorseEx2.getDetails()) {
+                            if (detail.toString().toLowerCase().contains("already exists")) {
+                                alreadyExists = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (alreadyExists) break;
+                    c = c.getCause();
+                }
+            }
+
+            // Last resort: check full stack trace string
+            if (!alreadyExists) {
+                java.io.StringWriter sw = new java.io.StringWriter();
+                exception.printStackTrace(new java.io.PrintWriter(sw));
+                if (sw.toString().toLowerCase().contains("already exists")) {
+                    alreadyExists = true;
+                }
+            }
+
+            if (alreadyExists) {
+                // Product is already on-chain — treat as idempotent success
+                BlockchainTransaction blockchainTransaction = BlockchainTransaction.builder()
+                        .productId(request.getProductId())
+                        .transactionId("ALREADY_REGISTERED_" + java.util.UUID.randomUUID())
+                        .transactionType(TransactionType.PRODUCT_REGISTERED)
+                        .performedBy(request.getManufacturerId())
+                        .status(BlockchainStatus.SUCCESS)
+                        .message("Product was already registered on blockchain.")
+                        .blockNumber(null)
+                        .blockHash(null)
+                        .build();
+
+                BlockchainTransaction savedTransaction =
+                        blockchainTransactionRepository.save(blockchainTransaction);
+
+                return blockchainTransactionMapper.toResponse(savedTransaction);
+            }
+
             throw new RuntimeException(
                     "Failed to register product on Hyperledger Fabric.",
                     exception
@@ -168,16 +248,13 @@ public class BlockchainServiceImpl implements BlockchainService {
     public VerificationResponse verifyProduct(VerifyProductRequest request) {
 
         try {
-            Proposal proposal = fabricContractService
-                    .newProposal("VerifyProduct")
-                    .addArguments(
-                            request.getProductId().toString()
-                    )
-                    .build();
+            // VerifyProduct is read-only — use evaluateTransaction (no ledger write).
+            Contract contract = fabricContractService.getContract();
 
-            Transaction transaction = proposal.endorse();
-
-            byte[] result = transaction.submit();
+            byte[] result = contract.evaluateTransaction(
+                    "VerifyProduct",
+                    request.getProductId().toString()
+            );
 
             JsonNode productAsset = objectMapper.readTree(result);
 
@@ -185,7 +262,7 @@ public class BlockchainServiceImpl implements BlockchainService {
                     .productId(request.getProductId())
                     .authentic(productAsset.path("isVerified").asBoolean())
                     .message("Product verification completed successfully.")
-                    .transactionId(transaction.getTransactionId())
+                    .transactionId("query-" + UUID.randomUUID())
                     .build();
 
         } catch (Exception exception) {
@@ -199,32 +276,33 @@ public class BlockchainServiceImpl implements BlockchainService {
     public ProductHistoryResponse getProductHistory(UUID productId) {
 
         try {
-            Proposal proposal = fabricContractService
-                    .newProposal("GetProductHistory")
-                    .addArguments(productId.toString())
-                    .build();
+            // GetProductHistory uses GetHistoryForKey which is read-only — use evaluateTransaction.
+            Contract contract = fabricContractService.getContract();
 
-            Transaction transaction = proposal.endorse();
-
-            byte[] result = transaction.submit();
+            byte[] result = contract.evaluateTransaction(
+                    "GetProductHistory",
+                    productId.toString()
+            );
 
             JsonNode historyArray = objectMapper.readTree(result);
 
             List<ProductHistoryItemResponse> historyItems = new ArrayList<>();
 
-            for (JsonNode product : historyArray) {
+            if (historyArray != null && historyArray.isArray()) {
+                for (JsonNode product : historyArray) {
 
-                ProductHistoryItemResponse historyItem = ProductHistoryItemResponse.builder()
-                        .manufacturerId(UUID.fromString(product.get("manufacturerId").asText()))
-                        .currentOwnerId(UUID.fromString(product.get("currentOwnerId").asText()))
-                        .currentOwnerRole(product.get("currentOwnerRole").asText())
-                        .productStatus(product.get("productStatus").asText())
-                        .verified(product.get("isVerified").asBoolean())
-                        .createdAt(product.get("createdAt").asText())
-                        .updatedAt(product.get("updatedAt").asText())
-                        .build();
+                    ProductHistoryItemResponse historyItem = ProductHistoryItemResponse.builder()
+                            .manufacturerId(UUID.fromString(product.path("manufacturerId").asText()))
+                            .currentOwnerId(UUID.fromString(product.path("currentOwnerId").asText()))
+                            .currentOwnerRole(product.path("currentOwnerRole").asText())
+                            .productStatus(product.path("productStatus").asText())
+                            .verified(product.path("isVerified").asBoolean())
+                            .createdAt(product.path("createdAt").asText())
+                            .updatedAt(product.path("updatedAt").asText())
+                            .build();
 
-                historyItems.add(historyItem);
+                    historyItems.add(historyItem);
+                }
             }
 
             return ProductHistoryResponse.builder()

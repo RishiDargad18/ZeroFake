@@ -41,6 +41,10 @@ public class FabricGatewayService {
                 .identity(fabricIdentityService.getIdentity())
                 .signer(fabricIdentityService.getSigner())
                 .connection(channel)
+                .endorseOptions(options -> options.withDeadlineAfter(30, TimeUnit.SECONDS))
+                .submitOptions(options -> options.withDeadlineAfter(10, TimeUnit.SECONDS))
+                .commitStatusOptions(options -> options.withDeadlineAfter(60, TimeUnit.SECONDS))
+                .evaluateOptions(options -> options.withDeadlineAfter(30, TimeUnit.SECONDS))
                 .connect();
 
         return gateway;

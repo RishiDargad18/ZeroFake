@@ -66,18 +66,29 @@ export default function QrScanner({
 
     return () => {
       mounted = false;
-
-      const scanner =
-        scannerRef.current;
-
+      const scanner = scannerRef.current;
       if (scanner) {
-  void scanner
-    .stop()
-    .catch(() => {})
-    .finally(() => {
-      scanner.clear();
-    });
-}
+        try {
+          if (scanner.isScanning) {
+            void scanner
+              .stop()
+              .catch(() => {})
+              .finally(() => {
+                try {
+                  scanner.clear();
+                } catch {}
+              });
+          } else {
+            try {
+              scanner.clear();
+            } catch {}
+          }
+        } catch {
+          try {
+            scanner.clear();
+          } catch {}
+        }
+      }
     };
   }, [onScan, onClose]);
 

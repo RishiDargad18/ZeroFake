@@ -6,6 +6,8 @@ import type {
   RefreshTokenRequest,
   TokenResponse,
   UserResponse,
+  RegisterRequest,
+  RegisterResponse,
 } from "@/types/auth";
 
 class AuthService {
@@ -29,6 +31,11 @@ class AuthService {
 
   async getCurrentUser(): Promise<UserResponse> {
     return await authApi.getCurrentUser();
+  }
+
+  async register(request: RegisterRequest): Promise<RegisterResponse> {
+    const apiResponse = await authApi.register(request);
+    return apiResponse.data;
   }
 }
 

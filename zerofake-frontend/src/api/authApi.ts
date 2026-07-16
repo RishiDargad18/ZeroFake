@@ -8,6 +8,8 @@ import type {
   RefreshTokenRequest,
   TokenResponse,
   UserResponse,
+  RegisterRequest,
+  RegisterResponse,
 } from "@/types/auth";
 
 const api = createApiClient(
@@ -56,6 +58,14 @@ export const authApi = {
         `${BASE_URL}/me`
       );
 
+    return response.data;
+  },
+
+  async register(request: RegisterRequest) {
+    const response = await api.post<ApiResponse<RegisterResponse>>(
+      `${BASE_URL}/register`,
+      request
+    );
     return response.data;
   },
 };

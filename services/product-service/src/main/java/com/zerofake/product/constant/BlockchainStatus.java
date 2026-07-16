@@ -4,6 +4,7 @@ public enum BlockchainStatus {
 
     PENDING,
     REGISTERED,
+    SUCCESS,
     FAILED
 
 }

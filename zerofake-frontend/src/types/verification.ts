@@ -21,3 +21,13 @@ export interface VerificationResponse {
   triggeredRules: string[];
   message: string;
 }
+
+export interface VerificationLogResponse {
+  verificationId: string;
+  productId: string;
+  riskScore: number;
+  authentic: boolean;
+  fraudDetected: boolean;
+  verificationResult: VerificationResult;
+  scannedAt: string;
+}

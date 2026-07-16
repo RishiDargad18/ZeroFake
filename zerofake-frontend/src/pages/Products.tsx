@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useUpdateProduct } from "@/hooks/useUpdateProduct";
 import { toast } from "react-hot-toast";
+import { productService } from "@/services/productService";
 import { useCategories } from "@/hooks/useCategories";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { SelectOption } from "@/types/common";
@@ -227,6 +228,12 @@ const handleRegisterBlockchain = async (
       manufacturerId:
         product.manufacturerId,
     });
+
+    try {
+      await productService.updateBlockchainStatus(product.id, "SUCCESS");
+    } catch (statusError) {
+      console.error("Failed to update status off-chain:", statusError);
+    }
 
     toast.success(
       "Product registered on blockchain successfully."
@@ -534,15 +541,7 @@ const editInitialValues =
     );
   }
 
-  if (products.length === 0) {
-    return (
-      <EmptyState
-        title="No Products Found"
-        description="Register your first product to begin using ZeroFake."
-        icon={<Package size={60} />}
-      />
-    );
-  }
+
 
   return (
     <motion.div
@@ -620,16 +619,24 @@ const editInitialValues =
       </motion.section>
 
       <motion.section variants={itemVariants}>
-        <GlassTable<ProductResponse>
-        columns={columns}
-        data={filteredProducts}
-        rowKey="id"
-        loading={isLoading}
-        emptyMessage="No products match your search."
-        onRowClick={(product) => {
-          openProduct(product);
-        }}
-        />
+        {products.length === 0 ? (
+          <EmptyState
+            title="No Products Found"
+            description="Register your first product to begin using ZeroFake."
+            icon={<Package size={60} />}
+          />
+        ) : (
+          <GlassTable<ProductResponse>
+            columns={columns}
+            data={filteredProducts}
+            rowKey="id"
+            loading={isLoading}
+            emptyMessage="No products match your search."
+            onRowClick={(product) => {
+              openProduct(product);
+            }}
+          />
+        )}
       </motion.section>
       <AnimatePresence>
   {showEditModal && (

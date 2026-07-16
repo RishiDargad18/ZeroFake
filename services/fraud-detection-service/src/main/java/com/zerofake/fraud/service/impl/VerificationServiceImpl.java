@@ -73,15 +73,44 @@ public class VerificationServiceImpl implements VerificationService {
             return Math.min(riskScore, 100);
         }
 
-        scanHistoryRepository
-                .findTopByProductIdAndSuccessfulTrueOrderByScannedAtDesc(
-                        request.getProductId()
-                )
-                .ifPresent(previousScan -> {
+        List<ScanHistory> successfulScans = scanHistoryRepository.findByProductId(request.getProductId()).stream()
+                .filter(ScanHistory::getSuccessful)
+                .toList();
 
-                    // Duplicate scan
-                    // (Score calculated independently in verifyProduct().)
-                });
+        ScanHistory firstSuccessfulScan = successfulScans.stream()
+                .min(java.util.Comparator.comparing(ScanHistory::getScannedAt))
+                .orElse(null);
+
+        boolean isFirstVerificationUser = false;
+        java.util.UUID firstVerificationUserId = null;
+        if (firstSuccessfulScan == null) {
+            isFirstVerificationUser = true;
+        } else {
+            firstVerificationUserId = firstSuccessfulScan.getUserId();
+            if (request.getUserId().equals(firstVerificationUserId)) {
+                isFirstVerificationUser = true;
+            }
+        }
+
+        if (!isFirstVerificationUser) {
+            java.util.Set<java.util.UUID> otherUserIds = new java.util.HashSet<>();
+            for (ScanHistory scan : successfulScans) {
+                if (scan.getUserId() != null && !scan.getUserId().equals(firstVerificationUserId)) {
+                    otherUserIds.add(scan.getUserId());
+                }
+            }
+            otherUserIds.add(request.getUserId());
+
+            int otherUserCount = otherUserIds.size();
+            riskScore += 30 * otherUserCount;
+
+            boolean multipleLocations = successfulScans.stream()
+                    .anyMatch(scan -> !scan.getLocation().equalsIgnoreCase(request.getLocation()));
+
+            if (multipleLocations) {
+                riskScore += 35;
+            }
+        }
 
         return Math.min(riskScore, 100);
     }
@@ -148,39 +177,55 @@ public class VerificationServiceImpl implements VerificationService {
             // Retrieve blockchain history as per approved workflow.
             blockchainServiceClient.getProductHistory(request.getProductId());
 
-            scanHistoryRepository
-                    .findTopByProductIdAndSuccessfulTrueOrderByScannedAtDesc(
-                            request.getProductId()
-                    )
-                    .ifPresent(previousScan -> {
+            List<ScanHistory> successfulScans = scanHistoryRepository.findByProductId(request.getProductId()).stream()
+                    .filter(ScanHistory::getSuccessful)
+                    .toList();
 
-                        if (previousScan.getUserId().equals(request.getUserId())) {
-                            return;
-                        }
+            ScanHistory firstSuccessfulScan = successfulScans.stream()
+                    .min(java.util.Comparator.comparing(ScanHistory::getScannedAt))
+                    .orElse(null);
 
-                        // Duplicate QR Scan
-                        triggeredRules.add(FraudType.DUPLICATE_QR.name());
-
-                        // Multiple Location Scan
-                        if (!previousScan.getLocation().equalsIgnoreCase(request.getLocation())) {
-                            triggeredRules.add(FraudType.MULTIPLE_LOCATION_SCAN.name());
-                        }
-                    });
-
-            if (triggeredRules.contains(FraudType.DUPLICATE_QR.name())) {
-                riskScore += 30;
-
-                if (highestFraudType == null) {
-                    highestFraudType = FraudType.DUPLICATE_QR;
+            boolean isFirstVerificationUser = false;
+            java.util.UUID firstVerificationUserId = null;
+            if (firstSuccessfulScan == null) {
+                isFirstVerificationUser = true;
+            } else {
+                firstVerificationUserId = firstSuccessfulScan.getUserId();
+                if (request.getUserId().equals(firstVerificationUserId)) {
+                    isFirstVerificationUser = true;
                 }
             }
 
-            if (triggeredRules.contains(FraudType.MULTIPLE_LOCATION_SCAN.name())) {
-                riskScore += 35;
+            if (!isFirstVerificationUser) {
+                java.util.Set<java.util.UUID> otherUserIds = new java.util.HashSet<>();
+                for (ScanHistory scan : successfulScans) {
+                    if (scan.getUserId() != null && !scan.getUserId().equals(firstVerificationUserId)) {
+                        otherUserIds.add(scan.getUserId());
+                    }
+                }
+                otherUserIds.add(request.getUserId());
 
-                if (highestFraudType == null ||
-                        highestFraudType == FraudType.DUPLICATE_QR) {
-                    highestFraudType = FraudType.MULTIPLE_LOCATION_SCAN;
+                int otherUserCount = otherUserIds.size();
+                riskScore += 30 * otherUserCount;
+                triggeredRules.add(FraudType.DUPLICATE_QR.name());
+
+                boolean multipleLocations = successfulScans.stream()
+                        .anyMatch(scan -> !scan.getLocation().equalsIgnoreCase(request.getLocation()));
+
+                if (multipleLocations) {
+                    triggeredRules.add(FraudType.MULTIPLE_LOCATION_SCAN.name());
+                }
+
+                if (triggeredRules.contains(FraudType.DUPLICATE_QR.name())) {
+                    if (highestFraudType == null) {
+                        highestFraudType = FraudType.DUPLICATE_QR;
+                    }
+                }
+
+                if (triggeredRules.contains(FraudType.MULTIPLE_LOCATION_SCAN.name())) {
+                    if (highestFraudType == null || highestFraudType == FraudType.DUPLICATE_QR) {
+                        highestFraudType = FraudType.MULTIPLE_LOCATION_SCAN;
+                    }
                 }
             }
 

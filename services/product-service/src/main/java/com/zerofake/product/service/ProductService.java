@@ -24,4 +24,6 @@ public interface ProductService {
 
     List<ProductResponse> getProductsByManufacturer(UUID manufacturerId);
 
+    ProductResponse updateBlockchainStatus(UUID id, String status);
+
 }

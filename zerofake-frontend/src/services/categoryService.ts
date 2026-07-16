@@ -11,6 +11,14 @@ class CategoryService {
 
     return response.data ?? [];
   }
+
+  async createCategory(name: string, description?: string): Promise<CategoryResponse> {
+    const response = await categoryApi.createCategory(name, description);
+    if (!response.data) {
+      throw new Error(response.message || "Failed to create category");
+    }
+    return response.data;
+  }
 }
 
 export const categoryService =

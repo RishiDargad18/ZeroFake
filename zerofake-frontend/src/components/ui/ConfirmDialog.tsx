@@ -2,7 +2,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import { cn } from "../../utils/cn";
 import GlassButton from "./GlassButton";
 import GlassCard from "./GlassCard";
 

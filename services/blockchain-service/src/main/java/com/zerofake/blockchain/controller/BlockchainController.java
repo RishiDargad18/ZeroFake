@@ -87,6 +87,18 @@ public class BlockchainController {
         );
     }
 
+    @GetMapping("/transactions")
+    @Operation(
+            summary = "Get All Transactions",
+            description = "Retrieves all blockchain transaction audit logs."
+    )
+    @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully.")
+    public ResponseEntity<List<BlockchainTransactionResponse>> getAllTransactions() {
+        return ResponseEntity.ok(
+                blockchainService.getAllTransactions()
+        );
+    }
+
     @GetMapping("/transactions/{transactionId}")
     @Operation(
             summary = "Get Transaction by Transaction ID",

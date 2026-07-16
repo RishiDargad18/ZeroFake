@@ -1,11 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShieldCheck,
   X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { navigationItems } from "@/constants/navigation";
 
+import logoImg from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
 interface SidebarProps {
   isOpen: boolean;
@@ -53,30 +53,19 @@ const visibleNavigationItems =
         "
       >
         <div className="flex items-center gap-3">
-          <div
-            className="
-              flex
-              h-12
-              w-12
-              items-center
-              justify-center
-              rounded-2xl
-              bg-blue-600
-              text-white
-              shadow-lg
-              shadow-blue-600/30
-            "
-          >
-            <ShieldCheck size={24} />
-          </div>
+          <img
+            src={logoImg}
+            alt="ZeroFake Logo"
+            className="h-12 w-12 object-contain"
+          />
 
           <div>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
               ZeroFake
             </h1>
 
-            <p className="text-xs text-gray-400">
-              Supply Chain Platform
+            <p className="text-[9px] tracking-widest font-semibold text-blue-400">
+              VERIFY. TRUST. PROTECT.
             </p>
           </div>
         </div>
@@ -168,35 +157,7 @@ const visibleNavigationItems =
         })}
       </nav>
 
-      {/* Footer */}
-
-      <div
-        className="
-          border-t
-          border-white/10
-          p-5
-        "
-      >
-        <div
-          className="
-            rounded-2xl
-            border
-            border-white/10
-            bg-white/5
-            p-4
-            text-center
-            shadow-[6px_6px_18px_rgba(0,0,0,0.15),-6px_-6px_18px_rgba(255,255,255,0.03)]
-          "
-        >
-          <p className="text-sm font-semibold">
-            ZeroFake
-          </p>
-
-          <p className="mt-1 text-xs text-gray-400">
-            Blockchain Verification Platform
-          </p>
-        </div>
-      </div>
+      {/* Footer Removed */}
     </aside>
   );
 

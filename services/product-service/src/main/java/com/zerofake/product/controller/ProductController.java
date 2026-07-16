@@ -158,4 +158,21 @@ public class ProductController {
                         .build()
         );
     }
+
+    @Operation(summary = "Update product blockchain status")
+    @PatchMapping("/{id}/blockchain-status")
+    public ResponseEntity<ApiResponse<ProductResponse>> updateBlockchainStatus(
+            @PathVariable UUID id,
+            @RequestParam String status) {
+
+        ProductResponse response = productService.updateBlockchainStatus(id, status);
+
+        return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                        .success(true)
+                        .message("Product blockchain status updated successfully.")
+                        .data(response)
+                        .build()
+        );
+    }
 }

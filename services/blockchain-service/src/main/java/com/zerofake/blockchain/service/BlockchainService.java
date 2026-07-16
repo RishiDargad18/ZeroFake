@@ -30,4 +30,6 @@ public interface BlockchainService {
 
     List<BlockchainTransactionResponse> getTransactionsByTransactionType(TransactionType transactionType);
 
+    List<BlockchainTransactionResponse> getAllTransactions();
+
 }

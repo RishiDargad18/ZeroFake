@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { useAuth } from "@/hooks/useAuth";
 import { dashboardService } from "@/services/dashboardService";
 import type { DashboardStatistics } from "@/types/dashboard";
 
@@ -11,6 +12,7 @@ interface UseDashboardReturn {
 }
 
 export function useDashboard(): UseDashboardReturn {
+  const { user } = useAuth();
   const [statistics, setStatistics] =
     useState<DashboardStatistics | null>(null);
 
@@ -21,12 +23,13 @@ export function useDashboard(): UseDashboardReturn {
     useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     setError(null);
 
     try {
       const response =
-        await dashboardService.getStatistics();
+        await dashboardService.getStatistics(user);
 
       setStatistics(response);
     } catch (err) {
@@ -40,11 +43,13 @@ export function useDashboard(): UseDashboardReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (user) {
+      void refresh();
+    }
+  }, [refresh, user]);
 
   return {
     statistics,

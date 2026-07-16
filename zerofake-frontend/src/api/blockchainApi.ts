@@ -35,16 +35,33 @@ export const blockchainApi = {
 
   return response.data;
 },
-async transferOwnership(
-  request: TransferOwnershipRequest
-) {
-  const response =
-    await api.post<BlockchainTransactionResponse>(
-      `${BASE_URL}/transfer-ownership`,
-      request
+  async transferOwnership(
+    request: TransferOwnershipRequest
+  ) {
+    const response =
+      await api.post<BlockchainTransactionResponse>(
+        `${BASE_URL}/transfer-ownership`,
+        request
+      );
+
+    return response.data;
+  },
+  async getTransactionByTransactionId(transactionId: string) {
+    const response = await api.get<BlockchainTransactionResponse>(
+      `${BASE_URL}/transactions/${transactionId}`
     );
-
-  return response.data;
-},
-
+    return response.data;
+  },
+  async getTransactionsByProductId(productId: string) {
+    const response = await api.get<BlockchainTransactionResponse[]>(
+      `${BASE_URL}/transactions/product/${productId}`
+    );
+    return response.data;
+  },
+  async getAllTransactions() {
+    const response = await api.get<BlockchainTransactionResponse[]>(
+      `${BASE_URL}/transactions`
+    );
+    return response.data;
+  }
 };

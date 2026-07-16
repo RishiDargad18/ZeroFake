@@ -1,13 +1,15 @@
 import {
-  useMemo,
   useState,
+  useEffect,
 } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 import { AnimatePresence, motion } from "framer-motion";
 
 import QrScanner from "@/components/verification/QrScanner";
-
 import { toast } from "react-hot-toast";
+import { Copy, Check } from "lucide-react";
+import { blockchainService } from "@/services/blockchainService";
 
 import { useVerification } from "@/hooks/useVerification";
 
@@ -17,6 +19,7 @@ import type {
   VerificationResponse,
   VerifyProductRequest,
 } from "@/types/verification";
+import type { OwnerRole } from "@/types/blockchain";
 
 import {
   GlassBadge,
@@ -24,12 +27,10 @@ import {
   GlassCard,
   GlassInput,
   GlassLoader,
-  GlassSelect,
 } from "@/components/ui";
 
-import type { SelectOption } from "@/types/common";
-
 export default function VerifyProduct() {
+  const { user } = useAuth();
   const {
     verifyProduct,
     isVerifying,
@@ -45,6 +46,19 @@ export default function VerifyProduct() {
       location: "",
     });
 
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        userId: user.id || "",
+        userRole: user.role ? user.role.replace("ROLE_", "") : "",
+        ipAddress: prev.ipAddress || "127.0.0.1",
+        deviceInfo: prev.deviceInfo || navigator.userAgent || "Browser Client",
+        location: prev.location || "Local Verification Terminal",
+      }));
+    }
+  }, [user]);
+
   const [result, setResult] =
     useState<VerificationResponse | null>(
       null
@@ -52,32 +66,7 @@ export default function VerifyProduct() {
 const [showScanner, setShowScanner] =
   useState(false);
 
-  const roleOptions =
-    useMemo<SelectOption[]>(
-      () => [
-        {
-          label: "Manufacturer",
-          value: "MANUFACTURER",
-        },
-        {
-          label: "Warehouse",
-          value: "WAREHOUSE",
-        },
-        {
-          label: "Distributor",
-          value: "DISTRIBUTOR",
-        },
-        {
-          label: "Retailer",
-          value: "RETAILER",
-        },
-        {
-          label: "Customer",
-          value: "CUSTOMER",
-        },
-      ],
-      []
-    );
+
 
   const updateField = (
     field: keyof VerifyProductRequest,
@@ -89,52 +78,75 @@ const [showScanner, setShowScanner] =
     }));
   };
 
-  const handleSubmit = async () => {
-    if (form.productId.trim() === "") {
-  toast.error(
-    "Please enter or scan a Product ID."
-  );
-  return;
-}
-setResult(null);
+  const [copied, setCopied] = useState(false);
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSubmit = async (targetProductId?: string) => {
+    const pid = targetProductId || form.productId;
+    if (pid.trim() === "") {
+      toast.error("Please enter or scan a Product ID.");
+      return;
+    }
+    setResult(null);
     try {
-      const response =
-        await verifyProduct(form);
+      const response = await verifyProduct({
+        ...form,
+        productId: pid,
+      });
 
       setResult(response);
+      toast.success("Product verified successfully.");
 
-      toast.success(
-        "Product verified successfully."
-      );
+      if (response.authentic && response.verificationResult === "GENUINE") {
+        toast.loading("Authentic product confirmed! Auto-transferring ownership to you on the ledger...", { id: "transfer" });
+        try {
+          // 1. Fetch current owner from blockchain history
+          const historyRes = await blockchainService.getProductHistory(pid);
+          let currentOwner = form.userId; // fallback
+          if (historyRes && historyRes.history && historyRes.history.length > 0) {
+            currentOwner = historyRes.history[historyRes.history.length - 1].currentOwnerId;
+          }
+
+          // 2. Perform transfer
+          await blockchainService.transferOwnership({
+            productId: pid,
+            fromOwnerId: currentOwner,
+            toOwnerId: form.userId,
+            toOwnerRole: (user?.role?.replace("ROLE_", "") || "CUSTOMER") as OwnerRole,
+          });
+          toast.success("Ownership auto-transferred successfully on the blockchain!", { id: "transfer" });
+        } catch (txErr) {
+          console.error("Auto-transfer transaction failed:", txErr);
+          toast.error("Verified as authentic, but blockchain ownership transfer failed: " + getApiError(txErr), { id: "transfer" });
+        }
+      }
     } catch (error) {
-      toast.error(
-        getApiError(error)
-      );
+      toast.error(getApiError(error));
     }
   };
 
   const openScanner = () => {
-  setShowScanner(true);
-};
+    setShowScanner(true);
+  };
 
-const closeScanner = () => {
-  setShowScanner(false);
-};
+  const closeScanner = () => {
+    setShowScanner(false);
+  };
 
-const handleScan = (
-  value: string
-) => {
-  setForm((previous) => ({
-    ...previous,
-    productId: value,
-  }));
-
-  closeScanner();
-
-  toast.success(
-    "QR code scanned successfully."
-  );
-};
+  const handleScan = (value: string) => {
+    setForm((previous) => ({
+      ...previous,
+      productId: value,
+    }));
+    closeScanner();
+    toast.success("QR code scanned successfully.");
+    void handleSubmit(value);
+  };
 
   return (
     <div className="space-y-8">
@@ -161,62 +173,6 @@ const handleScan = (
             }
           />
 
-          <GlassInput
-            label="User ID"
-            value={form.userId}
-            onChange={(e) =>
-              updateField(
-                "userId",
-                e.target.value
-              )
-            }
-          />
-
-          <GlassSelect
-            label="User Role"
-            placeholder="Select user role"
-            options={roleOptions}
-            value={form.userRole}
-            onChange={(e) =>
-              updateField(
-                "userRole",
-                e.target.value
-              )
-            }
-          />
-
-          <GlassInput
-            label="IP Address"
-            value={form.ipAddress}
-            onChange={(e) =>
-              updateField(
-                "ipAddress",
-                e.target.value
-              )
-            }
-          />
-
-          <GlassInput
-            label="Device Info"
-            value={form.deviceInfo}
-            onChange={(e) =>
-              updateField(
-                "deviceInfo",
-                e.target.value
-              )
-            }
-          />
-
-          <GlassInput
-            label="Location"
-            value={form.location}
-            onChange={(e) =>
-              updateField(
-                "location",
-                e.target.value
-              )
-            }
-          />
 
           <div className="flex justify-end gap-3">
             <GlassButton
@@ -249,10 +205,20 @@ const handleScan = (
               Verification Result
             </h2>
 
-            <p>
-              <strong>Product ID:</strong>{" "}
-              {result.productId}
-            </p>
+            <div className="flex items-center gap-3">
+              <strong>Product ID:</strong>
+              <span className="font-mono text-xs bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-xl text-indigo-300">
+                {result.productId.slice(0, 8)}...{result.productId.slice(-4)}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCopy(result.productId)}
+                className="text-gray-400 hover:text-white transition"
+                title="Copy Product UUID"
+              >
+                {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+              </button>
+            </div>
 
             <p>
               <strong>Authentic:</strong>{" "}

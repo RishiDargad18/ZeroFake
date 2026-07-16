@@ -10,9 +10,12 @@ import AppLayout from "@/layouts/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import FraudReports from "@/pages/FraudReports";
 import Login from "@/pages/Login";
-import PagePlaceholder from "@/components/ui/PagePlaceholder";
 import Products from "@/pages/Products";
 import VerifyProduct from "@/pages/VerifyProduct";
+import Blockchain from "@/pages/Blockchain";
+import ProductTimeline from "@/pages/ProductTimeline";
+import Settings from "@/pages/Settings";
+import Register from "@/pages/Register";
 
 import ProtectedRoute from "@/routes/ProtectedRoute";
 
@@ -23,6 +26,11 @@ export default function AppRouter() {
         <Route
           path="/login"
           element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
         />
 
         <Route element={<AppLayout />}>
@@ -78,10 +86,7 @@ export default function AppRouter() {
         "ROLE_MANUFACTURER",
       ]}
     >
-      <PagePlaceholder
-        title="Blockchain"
-        description="Blockchain operations will be implemented in a future milestone."
-      />
+      <Blockchain />
     </ProtectedRoute>
   }
 />
@@ -129,10 +134,7 @@ export default function AppRouter() {
         "ROLE_CUSTOMER",
       ]}
     >
-      <PagePlaceholder
-        title="Product Timeline"
-        description="Animated blockchain ownership timeline will be implemented in a future milestone."
-      />
+      <ProductTimeline />
     </ProtectedRoute>
   }
 />
@@ -150,10 +152,7 @@ export default function AppRouter() {
         "ROLE_CUSTOMER",
       ]}
     >
-      <PagePlaceholder
-        title="Settings"
-        description="Settings page will be implemented in a future milestone."
-      />
+      <Settings />
     </ProtectedRoute>
   }
 />

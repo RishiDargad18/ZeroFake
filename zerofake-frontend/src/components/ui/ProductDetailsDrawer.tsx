@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type {
   ProductHistoryResponse,
 } from "@/types/blockchain";
@@ -10,7 +10,10 @@ import {
   User,
   Warehouse,
   X,
+  Copy,
+  Check
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import {
   EmptyState,
@@ -96,6 +99,14 @@ export default function ProductDetailsDrawer({
   history,
   historyLoading,
 }: ProductDetailsDrawerProps) {
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    toast.success("Copied to clipboard!");
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
   useEffect(() => {
     const handleEscape = (
       event: KeyboardEvent
@@ -200,12 +211,30 @@ export default function ProductDetailsDrawer({
 
             <div className="flex-1 overflow-y-auto p-6">
               <GlassCard>
-                <DetailRow
+                 <DetailRow
                   label="Product Code"
                   value={
                     <div className="flex items-center gap-2">
                       <Package size={16} />
                       <span>{product.productCode}</span>
+                    </div>
+                  }
+                />
+
+                <DetailRow
+                  label="Product ID"
+                  value={
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-blue-300 bg-white/5 border border-white/5 px-2 py-0.5 rounded">
+                        {product.id.slice(0, 8)}...{product.id.slice(-4)}
+                      </span>
+                      <button
+                        onClick={() => handleCopy(product.id)}
+                        className="text-gray-400 hover:text-white transition"
+                        title="Copy Product ID"
+                      >
+                        {copiedText === product.id ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      </button>
                     </div>
                   }
                 />
@@ -235,9 +264,16 @@ export default function ProductDetailsDrawer({
                   value={
                     <div className="flex items-center gap-2">
                       <User size={16} />
-                      <span>
-                        {product.manufacturerId}
+                      <span className="font-mono text-xs text-blue-300 bg-white/5 border border-white/5 px-2 py-0.5 rounded">
+                        {product.manufacturerId.slice(0, 8)}...{product.manufacturerId.slice(-4)}
                       </span>
+                      <button
+                        onClick={() => handleCopy(product.manufacturerId)}
+                        className="text-gray-400 hover:text-white transition"
+                        title="Copy Manufacturer ID"
+                      >
+                        {copiedText === product.manufacturerId ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      </button>
                     </div>
                   }
                 />
@@ -306,33 +342,33 @@ export default function ProductDetailsDrawer({
               </GlassCard>
 
               <GlassCard className="mt-6">
-                <div
-                  className="
-                    flex
-                    h-56
-                    flex-col
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-dashed
-                    border-white/10
-                    text-center
-                  "
-                >
-                  <Package
-                    size={56}
-                    className="mb-4 text-blue-400"
-                  />
-
-                  <h3 className="text-lg font-semibold">
-                    QR Code Preview
-                  </h3>
-
-                  <p className="mt-2 text-sm text-gray-400">
-                    (Coming in Blockchain Module)
-                  </p>
-                </div>
+                {product.blockchainStatus === "SUCCESS" ? (
+                  <div className="flex flex-col items-center justify-center p-4 text-center">
+                    <div className="bg-white p-4 rounded-2xl shadow-xl shadow-blue-500/5 border border-white/20">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${product.id}`}
+                        alt="Product Authentication QR Code"
+                        className="w-44 h-44 rounded-xl"
+                      />
+                    </div>
+                    <h3 className="text-lg font-semibold mt-4 text-white">
+                      Verifiable Blockchain Seal
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-400 max-w-xs">
+                      Scan this QR code with any terminal camera to verify authenticity or auto-transfer custody.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-white/10 rounded-2xl h-56">
+                    <Package size={48} className="text-gray-500 mb-2 animate-pulse" />
+                    <h3 className="text-sm font-medium text-gray-400">
+                      QR Code Unavailable
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-500 max-w-xs">
+                      Please register this product on the blockchain first to activate its verifiable secure QR seal.
+                    </p>
+                  </div>
+                )}
               </GlassCard>
               <GlassCard className="mt-6">
   <div className="mb-6">
@@ -387,19 +423,37 @@ export default function ProductDetailsDrawer({
             </div>
 
             <div className="mt-3 space-y-2 text-sm text-gray-300">
-              <p>
+              <div className="flex items-center gap-2">
                 <span className="font-medium">
                   Manufacturer:
                 </span>{" "}
-                {transaction.manufacturerId}
-              </p>
+                <span className="font-mono text-xs text-blue-300">
+                  {transaction.manufacturerId.slice(0, 8)}...{transaction.manufacturerId.slice(-4)}
+                </span>
+                <button
+                  onClick={() => handleCopy(transaction.manufacturerId)}
+                  className="text-gray-400 hover:text-white transition"
+                  title="Copy Manufacturer UUID"
+                >
+                  {copiedText === transaction.manufacturerId ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                </button>
+              </div>
 
-              <p>
+              <div className="flex items-center gap-2">
                 <span className="font-medium">
                   Owner:
                 </span>{" "}
-                {transaction.currentOwnerId}
-              </p>
+                <span className="font-mono text-xs text-blue-300">
+                  {transaction.currentOwnerId.slice(0, 8)}...{transaction.currentOwnerId.slice(-4)}
+                </span>
+                <button
+                  onClick={() => handleCopy(transaction.currentOwnerId)}
+                  className="text-gray-400 hover:text-white transition"
+                  title="Copy Owner UUID"
+                >
+                  {copiedText === transaction.currentOwnerId ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                </button>
+              </div>
 
               <p>
                 <span className="font-medium">

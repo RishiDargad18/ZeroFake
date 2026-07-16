@@ -80,5 +80,13 @@ export const productApi = {
     );
 
   return response.data;
-},
+  },
+  async updateBlockchainStatus(productId: string, status: string) {
+    const response = await api.patch<ApiResponse<ProductResponse>>(
+      `${BASE_URL}/${productId}/blockchain-status`,
+      null,
+      { params: { status } }
+    );
+    return response.data;
+  },
 };

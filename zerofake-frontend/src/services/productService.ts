@@ -38,10 +38,20 @@ class ProductService {
 
   return response.data;
 }
-    async deleteProduct(
+  async deleteProduct(
     productId: string
   ): Promise<void> {
     await productApi.deleteProduct(productId);
+  }
+
+  async getProduct(productId: string): Promise<ProductResponse> {
+    const response = await productApi.getProductById(productId);
+    return response.data;
+  }
+
+  async updateBlockchainStatus(productId: string, status: string): Promise<ProductResponse> {
+    const response = await productApi.updateBlockchainStatus(productId, status);
+    return response.data;
   }
 }
 

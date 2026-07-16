@@ -8,13 +8,21 @@ export function getApiError(error: unknown): string {
 
     const response = error.response.data;
 
-    if (
-      response &&
-      typeof response === "object" &&
-      "message" in response &&
-      typeof response.message === "string"
-    ) {
-      return response.message;
+    if (response && typeof response === "object") {
+      // Check inside data wrapper first
+      if (
+        "data" in response &&
+        response.data &&
+        typeof response.data === "object" &&
+        "message" in response.data &&
+        typeof response.data.message === "string"
+      ) {
+        return response.data.message;
+      }
+      // Check top-level message next
+      if ("message" in response && typeof response.message === "string") {
+        return response.message;
+      }
     }
 
     switch (error.response.status) {

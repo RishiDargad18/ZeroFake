@@ -18,4 +18,14 @@ export const categoryApi = {
 
     return response.data;
   },
+
+  async createCategory(name: string, description: string = "Created dynamically during product registration") {
+    const response =
+      await api.post<ApiResponse<CategoryResponse>>(
+        BASE_URL,
+        { name, description }
+      );
+
+    return response.data;
+  },
 };

@@ -23,14 +23,25 @@ class BlockchainService {
   );
 }
 
-async transferOwnership(
-  request: TransferOwnershipRequest
-): Promise<BlockchainTransactionResponse> {
-  return blockchainApi.transferOwnership(
-    request
-  );
-}
+  async transferOwnership(
+    request: TransferOwnershipRequest
+  ): Promise<BlockchainTransactionResponse> {
+    return blockchainApi.transferOwnership(
+      request
+    );
+  }
 
+  async getTransactionByTransactionId(transactionId: string): Promise<BlockchainTransactionResponse> {
+    return blockchainApi.getTransactionByTransactionId(transactionId);
+  }
+
+  async getTransactionsByProductId(productId: string): Promise<BlockchainTransactionResponse[]> {
+    return blockchainApi.getTransactionsByProductId(productId);
+  }
+
+  async getAllTransactions(): Promise<BlockchainTransactionResponse[]> {
+    return blockchainApi.getAllTransactions();
+  }
 }
 
 export const blockchainService =

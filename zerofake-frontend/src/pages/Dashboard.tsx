@@ -1,10 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { motion } from "framer-motion";
 import {
-  Activity,
   BarChart3,
-  PackageSearch,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -23,7 +21,6 @@ import {
 import { Bar, Line } from "react-chartjs-2";
 
 import {
-  EmptyState,
   GlassBadge,
   GlassCard,
   GlassLoader,
@@ -32,7 +29,6 @@ import {
 
 import {
   DASHBOARD_STATISTICS,
-  RECENT_ACTIVITY,
 } from "@/constants/dashboard";
 
 import {
@@ -46,6 +42,11 @@ import {
 } from "@/constants/dashboardCharts";
 
 import { useDashboard } from "@/hooks/useDashboard";
+import { useAuth } from "@/hooks/useAuth";
+import { productApi } from "@/api/productApi";
+import { blockchainService } from "@/services/blockchainService";
+import { fraudApi } from "@/api/fraudApi";
+import type { BlockchainTransactionResponse } from "@/types/blockchain";
 import { getApiError } from "@/utils/apiError";
 
 ChartJS.register(
@@ -80,11 +81,150 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const {
     statistics,
     loading,
     error,
   } = useDashboard();
+
+  const [recentTx, setRecentTx] = useState<BlockchainTransactionResponse[]>([]);
+  const [verificationChart, setVerificationChart] = useState<any>(verificationTrendData);
+  const [fraudChart, setFraudChart] = useState<any>(fraudTrendData);
+
+  useEffect(() => {
+    const fetchRecentTx = async () => {
+      if (!user) return;
+      try {
+        const txs = await blockchainService.getAllTransactions();
+        let filteredTxs = txs;
+
+        if (user.role !== "ROLE_ADMIN") {
+          const prodRes = await productApi.getAllProducts();
+          const products = prodRes.data || [];
+
+          const userTxs = txs.filter(tx => tx.performedBy === user.id);
+          const relatedProductIds = new Set(userTxs.map(tx => tx.productId));
+
+          products.forEach(p => {
+            if (p.manufacturerId === user.id) {
+              relatedProductIds.add(p.id);
+            }
+          });
+
+          filteredTxs = txs.filter(tx => relatedProductIds.has(tx.productId));
+        }
+
+        const sorted = [...filteredTxs]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 5);
+        setRecentTx(sorted);
+      } catch (err) {
+        console.error("Failed to load recent transactions for dashboard:", err);
+      }
+    };
+    if (!loading && user) {
+      void fetchRecentTx();
+    }
+  }, [loading, user]);
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      if (!user) return;
+      try {
+        const [logsRes, reportsRes] = await Promise.all([
+          fraudApi.getVerificationLogs(),
+          fraudApi.getFraudReports()
+        ]);
+        
+        let logs = logsRes.data || [];
+        let reports = reportsRes.data || [];
+
+        if (user.role !== "ROLE_ADMIN") {
+          const prodRes = await productApi.getAllProducts();
+          const products = prodRes.data || [];
+
+          const txs = await blockchainService.getAllTransactions();
+          const userTxs = txs.filter(tx => tx.performedBy === user.id);
+          const relatedProductIds = new Set(userTxs.map(tx => tx.productId));
+
+          products.forEach(p => {
+            if (p.manufacturerId === user.id) {
+              relatedProductIds.add(p.id);
+            }
+          });
+
+          logs = logs.filter(log => relatedProductIds.has(log.productId));
+          reports = reports.filter(report => relatedProductIds.has(report.productId));
+        }
+        
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          return d;
+        });
+
+        const labels = last7Days.map(d => days[d.getDay()]);
+
+        const verificationsData = last7Days.map(date => {
+          return logs.filter(log => {
+            const logDate = new Date(log.scannedAt);
+            return logDate.toDateString() === date.toDateString();
+          }).length;
+        });
+
+        const fraudData = last7Days.map(date => {
+          return reports.filter(report => {
+            const repDate = new Date(report.detectedAt);
+            return repDate.toDateString() === date.toDateString();
+          }).length;
+        });
+
+        setVerificationChart({
+          labels,
+          datasets: [
+            {
+              label: "Verifications",
+              data: verificationsData,
+              borderColor: "#3B82F6",
+              backgroundColor: "rgba(59,130,246,0.18)",
+              tension: 0.4,
+              fill: true,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+          ],
+        });
+
+        setFraudChart({
+          labels,
+          datasets: [
+            {
+              label: "Fraud Reports",
+              data: fraudData,
+              backgroundColor: [
+                "#2563EB",
+                "#3B82F6",
+                "#60A5FA",
+                "#2563EB",
+                "#3B82F6",
+                "#60A5FA",
+                "#2563EB",
+              ],
+              borderRadius: 8,
+              maxBarThickness: 40,
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("Failed to load chart trends:", err);
+      }
+    };
+    if (!loading && user) {
+      void fetchChartData();
+    }
+  }, [loading, user]);
 
   useEffect(() => {
     if (error) {
@@ -98,30 +238,30 @@ export default function Dashboard() {
     );
   }
 
-  if (
-    statistics &&
-    statistics.productsRegistered === 0
-  ) {
-    return (
-      <EmptyState
-        title="No Products Found"
-        description="Register your first product to begin tracking it on the blockchain."
-        icon={<PackageSearch size={56} />}
-      />
-    );
-  }
-
   const statCards =
     DASHBOARD_STATISTICS.map((item) => {
-      if (
-        item.title ===
-        "Products Registered"
-      ) {
+      if (item.title === "Products Registered") {
         return {
           ...item,
-          value:
-            statistics?.productsRegistered ??
-            item.value,
+          value: statistics?.productsRegistered ?? 0,
+        };
+      }
+      if (item.title === "Blockchain Transactions") {
+        return {
+          ...item,
+          value: statistics?.blockchainTransactions ?? 0,
+        };
+      }
+      if (item.title === "Product Verifications") {
+        return {
+          ...item,
+          value: statistics?.productVerifications ?? 0,
+        };
+      }
+      if (item.title === "Fraud Reports") {
+        return {
+          ...item,
+          value: statistics?.fraudReports ?? 0,
         };
       }
 
@@ -184,7 +324,7 @@ export default function Dashboard() {
 
               <div className="h-72">
                 <Line
-                  data={verificationTrendData}
+                  data={verificationChart}
                   options={lineChartOptions}
                 />
               </div>
@@ -206,7 +346,7 @@ export default function Dashboard() {
 
               <div className="h-72">
                 <Bar
-                  data={fraudTrendData}
+                  data={fraudChart}
                   options={barChartOptions}
                 />
               </div>
@@ -235,47 +375,58 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-8 space-y-4">
-            {RECENT_ACTIVITY.map((activity) => (
-              <motion.div
-                key={activity.id}
-                whileHover={{
-                  x: 4,
-                }}
-                transition={{
-                  duration: 0.2,
-                }}
-                className="
-                  flex
-                  flex-col
-                  gap-4
-                  rounded-2xl
-                  border
-                  border-white/10
-                  bg-white/5
-                  p-5
-                  backdrop-blur-xl
-                  md:flex-row
-                  md:items-center
-                  md:justify-between
-                "
-              >
-                <div>
-                  <h3 className="font-medium">
-                    {activity.title}
-                  </h3>
-
-                  <p className="mt-1 text-sm text-gray-400">
-                    {activity.timestamp}
-                  </p>
-                </div>
-
-                <GlassBadge
-                  variant={activity.status}
+            {recentTx.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">
+                No recent activity recorded on the ledger.
+              </p>
+            ) : (
+              recentTx.map((tx) => (
+                <motion.div
+                  key={tx.id}
+                  whileHover={{
+                    x: 4,
+                  }}
+                  transition={{
+                    duration: 0.2,
+                  }}
+                  className="
+                    flex
+                    flex-col
+                    gap-4
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-white/5
+                    p-5
+                    backdrop-blur-xl
+                    md:flex-row
+                    md:items-center
+                    md:justify-between
+                  "
                 >
-                  {activity.status.toUpperCase()}
-                </GlassBadge>
-              </motion.div>
-            ))}
+                  <div>
+                    <h3 className="font-medium text-white">
+                      {tx.message}
+                    </h3>
+
+                    <p className="mt-1 text-xs text-gray-400 font-mono break-all">
+                      Tx ID: {tx.transactionId}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400">
+                      {new Date(tx.createdAt).toLocaleTimeString()}
+                    </span>
+                    <GlassBadge
+                      variant={tx.status === "SUCCESS" ? "success" : "danger"}
+                    >
+                      {tx.status}
+                    </GlassBadge>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         </GlassCard>
       </motion.section>

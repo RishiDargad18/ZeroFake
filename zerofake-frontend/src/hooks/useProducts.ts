@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { productService } from "@/services/productService";
 import type { ProductResponse } from "@/types/product";
@@ -22,8 +23,9 @@ interface UseProductsReturn {
 }
 
 export function useProducts(): UseProductsReturn {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<ProductResponse[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
 
   const [isLoading, setIsLoading] = useState(true);
 
