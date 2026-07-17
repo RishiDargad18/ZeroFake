@@ -242,6 +242,30 @@ public class VerificationServiceImpl implements VerificationService {
             verificationResult = VerificationResult.SUSPICIOUS;
         } else {
             verificationResult = VerificationResult.GENUINE;
+
+            if (authentic && ("ROLE_CUSTOMER".equalsIgnoreCase(request.getUserRole()) || "CUSTOMER".equalsIgnoreCase(request.getUserRole()))) {
+                try {
+                    com.zerofake.fraud.client.blockchain.dto.response.ProductHistoryResponse history =
+                            blockchainServiceClient.getProductHistory(request.getProductId());
+                    java.util.UUID currentOwnerId = request.getUserId();
+                    if (history != null && history.getHistory() != null && !history.getHistory().isEmpty()) {
+                        String currentOwnerStr = history.getHistory().get(history.getHistory().size() - 1).getCurrentOwnerId().toString();
+                        currentOwnerId = java.util.UUID.fromString(currentOwnerStr);
+                    }
+
+                    com.zerofake.fraud.client.blockchain.dto.request.TransferOwnershipRequest transferRequest =
+                            com.zerofake.fraud.client.blockchain.dto.request.TransferOwnershipRequest.builder()
+                                    .productId(request.getProductId())
+                                    .fromOwnerId(currentOwnerId)
+                                    .toOwnerId(request.getUserId())
+                                    .toOwnerRole("CUSTOMER")
+                                    .build();
+
+                    blockchainServiceClient.transferOwnership(transferRequest);
+                } catch (Exception ex) {
+                    System.err.println("Auto-transfer ownership failed during verification: " + ex.getMessage());
+                }
+            }
         }
         ScanHistory scanHistory = ScanHistory.builder()
                 .productId(request.getProductId())

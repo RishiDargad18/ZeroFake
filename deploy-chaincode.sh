@@ -2,13 +2,13 @@
 set -e
 
 # ZeroFake Chaincode Re-Deployment Script
-# Previous sequence on mychannel was 3, so we use sequence=4 for the new version.
+# Fresh channel setup, so we use sequence=1.
 
 FABRIC_SAMPLES=/home/rishi_dargad18/hyperledger/fabric-samples
 TEST_NETWORK=$FABRIC_SAMPLES/test-network
 CHAINCODE_NAME=zerofake
 CHAINCODE_VERSION=2.0
-CHAINCODE_SEQUENCE=4
+CHAINCODE_SEQUENCE=1
 CHANNEL=mychannel
 
 export PATH="$PATH:$FABRIC_SAMPLES/bin"
@@ -53,12 +53,12 @@ echo "Packaged."
 
 echo "=== Step 3: Install on Org1 ==="
 setOrg1
-peer lifecycle chaincode install /tmp/zerofake.tar.gz
+peer lifecycle chaincode install /tmp/zerofake.tar.gz || true
 echo "Installed on Org1."
 
 echo "=== Step 4: Install on Org2 ==="
 setOrg2
-peer lifecycle chaincode install /tmp/zerofake.tar.gz
+peer lifecycle chaincode install /tmp/zerofake.tar.gz || true
 echo "Installed on Org2."
 
 echo "=== Step 5: Get Package ID ==="
@@ -122,7 +122,9 @@ peer chaincode invoke \
   -c '{"function":"RegisterProduct","Args":["PRODUCT-SMOKE-001","MANUFACTURER-001"]}' \
   --tls --cafile $ORDERER_CA --orderer $ORDERER_ADDRESS \
   --peerAddresses localhost:7051 \
-  --tlsRootCertFiles $TEST_NETWORK/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+  --tlsRootCertFiles $TEST_NETWORK/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles $TEST_NETWORK/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
 
 sleep 3
 

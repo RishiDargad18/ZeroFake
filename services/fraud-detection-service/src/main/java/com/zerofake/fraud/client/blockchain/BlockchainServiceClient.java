@@ -1,8 +1,10 @@
 package com.zerofake.fraud.client.blockchain;
 
 import com.zerofake.fraud.client.blockchain.dto.request.VerifyProductRequest;
+import com.zerofake.fraud.client.blockchain.dto.request.TransferOwnershipRequest;
 import com.zerofake.fraud.client.blockchain.dto.response.ProductHistoryResponse;
 import com.zerofake.fraud.client.blockchain.dto.response.VerificationResponse;
+import com.zerofake.fraud.client.blockchain.dto.response.BlockchainTransactionResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,5 +24,8 @@ public interface BlockchainServiceClient {
 
     @GetMapping("/api/v1/blockchain/products/{productId}/history")
     ProductHistoryResponse getProductHistory(@PathVariable UUID productId);
+
+    @PostMapping("/api/v1/blockchain/transfer-ownership")
+    BlockchainTransactionResponse transferOwnership(@RequestBody TransferOwnershipRequest request);
 
 }
