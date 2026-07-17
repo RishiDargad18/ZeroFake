@@ -1,101 +1,99 @@
-# ZeroFake – Blockchain-Based Anti-Counterfeiting & Supply Chain Verification Platform
+# 🛡️ ZeroFake
 
-ZeroFake is a decentralized platform designed to combat counterfeit products through secure product authentication, end-to-end supply chain traceability, and blockchain-backed verification. Built using a microservices architecture, it combines Spring Boot, React, PostgreSQL, and Hyperledger Fabric to provide a scalable and tamper-proof solution.
+> A Blockchain-Based Anti-Counterfeiting & Supply Chain Verification Platform built with Spring Boot Microservices, React, and Hyperledger Fabric.
+
+ZeroFake is a decentralized platform designed to combat counterfeit products by combining blockchain technology with a modern microservices architecture. It enables secure product registration, end-to-end supply chain traceability, immutable ownership records, and intelligent fraud detection through QR-based product verification.
 
 ---
 
-# Architecture Overview
+## 🚀 Features
+
+- 🔐 JWT-based Authentication & Role-Based Access Control (RBAC)
+- 📦 Product Registration & QR Code Generation
+- 🔗 Blockchain-backed Product Registration & Ownership Tracking
+- 📜 Immutable Audit Trail using Hyperledger Fabric
+- ✅ Real-time Product Verification
+- 🚨 Rule-based Fraud Detection & Dynamic Risk Scoring
+- 📊 Interactive Analytics Dashboard
+- 📱 Mobile-friendly QR Code Scanner
+- 🏗️ Scalable Spring Boot Microservices Architecture
+
+---
+
+## 🏛️ System Architecture
 
 ```mermaid
 graph TD
     User([User]) --> Frontend[React Frontend]
+
     Frontend --> Auth[Authentication Service]
     Frontend --> Product[Product Service]
     Frontend --> Fraud[Fraud Detection Service]
     Frontend --> Blockchain[Blockchain Service]
 
-    Auth --> PostgreSQL[(PostgreSQL)]
-    Product --> PostgreSQL
-    Fraud --> PostgreSQL
+    Auth --> DB[(PostgreSQL)]
+    Product --> DB
+    Fraud --> DB
 
-    Blockchain --> Fabric[Hyperledger Fabric]
+    Blockchain --> Fabric[Hyperledger Fabric Network]
 ```
 
-### Tech Stack
+---
 
-**Backend**
+## 🛠️ Tech Stack
 
-* Java
-* Spring Boot
-* Spring Security (JWT)
-* Spring Data JPA
-* OpenFeign
+### Backend
+- Java
+- Spring Boot
+- Spring Security (JWT)
+- Spring Data JPA (Hibernate)
+- Spring Cloud OpenFeign
 
-**Frontend**
+### Frontend
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+- Lucide React
 
-* React
-* Vite
-* TypeScript
-* Tailwind CSS
-* Framer Motion
+### Database
+- PostgreSQL
 
-**Database**
-
-* PostgreSQL
-
-**Blockchain**
-
-* Hyperledger Fabric
-* Fabric Gateway Java SDK
-* Go (Chaincode)
+### Blockchain
+- Hyperledger Fabric
+- Fabric Gateway Java SDK
+- Go (Chaincode)
 
 ---
 
-# Key Features
+## ⚙️ Getting Started
 
-* Secure authentication with JWT and Role-Based Access Control (RBAC)
-* Product registration with QR code generation
-* Blockchain-backed product registration and ownership tracking
-* Immutable audit trail for supply chain events
-* Real-time product verification
-* Rule-based fraud detection with dynamic risk scoring
-* Modern, responsive dashboard with analytics and QR scanning
+### Prerequisites
 
----
+- Java JDK 17+
+- Node.js 18+
+- PostgreSQL
+- Docker Desktop
+- WSL2 (for Hyperledger Fabric)
+- Go (for Chaincode)
 
-# Getting Started
+### Installation
 
-## Prerequisites
-
-* Java JDK 17+
-* Node.js 18+
-* PostgreSQL
-* Docker Desktop
-* WSL2 (for Hyperledger Fabric)
-* Go (for building chaincode)
-
-## Installation
-
-### 1. Clone the repository
+Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/<your-username>/ZeroFake.git
 cd ZeroFake
 ```
 
-### 2. Configure the environment
+Configure the required environment variables and database settings for your local machine.
 
-Create the required PostgreSQL databases and update the application configuration files with your local database credentials.
+Start the Hyperledger Fabric network and deploy the provided chaincode.
 
-### 3. Start Hyperledger Fabric
+Run the backend services.
 
-Initialize the Hyperledger Fabric test network and deploy the provided chaincode.
-
-### 4. Run the backend services
-
-Start each Spring Boot microservice.
-
-### 5. Run the frontend
+Start the frontend:
 
 ```bash
 npm install
@@ -106,37 +104,55 @@ Open the application in your browser.
 
 ---
 
-# Project Structure
+## 📂 Project Structure
 
 ```
-Frontend (React)
-        │
-        ├── Authentication Service
-        ├── Product Service
-        ├── Blockchain Service
-        └── Fraud Detection Service
-                │
-                ├── PostgreSQL
-                └── Hyperledger Fabric
+ZeroFake
+│
+├── frontend/
+├── auth-service/
+├── product-service/
+├── blockchain-service/
+├── fraud-detection-service/
+├── chaincode/
+└── docs/
 ```
 
 ---
 
-# Future Enhancements
+## 🎯 Core Capabilities
 
-* Mobile application
-* Multi-organization blockchain deployment
-* AI-assisted fraud detection
-* Cloud-native deployment
-* Real-time notifications
-* Analytics dashboard enhancements
-
----
-
-# License
-
-This project is intended for educational and demonstration purposes.
+- Secure authentication and authorization
+- Product lifecycle management
+- Blockchain-based ownership tracking
+- Product authenticity verification
+- Counterfeit detection using intelligent verification rules
+- Immutable transaction history
+- Modern analytics dashboard
 
 ---
 
-If you found this project interesting, consider giving the repository a ⭐.
+## 🔮 Future Enhancements
+
+- AI-powered fraud detection
+- Multi-organization Fabric network
+- Mobile application
+- Cloud-native deployment
+- Real-time notifications
+- Advanced analytics & reporting
+
+---
+
+## 📄 License
+
+This project is licensed under the **Apache License 2.0**.
+
+See the [LICENSE](LICENSE) file for details.
+
+---
+
+## ⭐ Support
+
+If you found this project interesting, consider giving it a **Star ⭐** on GitHub.
+
+Contributions, suggestions, and feedback are always welcome!
