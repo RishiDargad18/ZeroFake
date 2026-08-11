@@ -46,6 +46,15 @@ logs/
 temp/
 tmp/
 
+# Environment / Secrets
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+# Generated QR code images
+**/data/qr-codes/
+
 # Blockchain / Cryptographic Secrets & Wallets
 **/wallet/
 **/*.jks
@@ -57,3 +66,10 @@ tmp/
 **/crypto-config/
 connection-org1.json
 connection-org2.json
+
+# Fabric crypto material mounted for local runs
+/fabric/
+
+# Python bytecode (docs generator)
+__pycache__/
+*.pyc

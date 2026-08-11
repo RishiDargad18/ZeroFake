@@ -1,0 +1,31 @@
+# Normalise line endings in the repository, and check text out with each
+# platform's native endings. Without this, contributors on Windows and Linux
+# produce diffs that differ only in line terminators.
+* text=auto
+
+# Files that must keep LF regardless of platform: shell scripts fail with CRLF,
+# and the Maven wrapper and Dockerfiles are executed inside Linux containers.
+*.sh          text eol=lf
+mvnw          text eol=lf
+Dockerfile    text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.cmd         text eol=crlf
+*.bat         text eol=crlf
+
+# Binary files: never apply line-ending conversion, and do not attempt to diff.
+*.pdf         binary
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.ico         binary
+*.jar         binary
+*.war         binary
+*.zip         binary
+*.tar.gz      binary
+*.woff        binary
+*.woff2       binary
+*.ttf         binary
