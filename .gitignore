@@ -5,7 +5,9 @@ db.json
 
 # IDE / Editor Files
 .idea/
-.vscode/
+.vscode/*
+# Shared editor settings that are intentionally part of the project.
+!.vscode/settings.json
 *.suo
 *.ntvs*
 *.njsproj
