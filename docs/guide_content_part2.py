@@ -190,6 +190,69 @@ A(("key", "Deliberate omission is a design skill",
 # PART VI
 # ===========================================================================
 
+A(("h1", "5.11  Serving everything from one origin"))
+A(("p",
+   "**Problem:** in development the browser calls four services on four ports, "
+   "which means four origins and therefore CORS on every request."))
+A(("p",
+   "**Chosen:** in the deployed configuration, nginx terminates TLS and routes path "
+   "prefixes &mdash; `/auth/`, `/products/`, `/blockchain/`, `/fraud/` &mdash; to the "
+   "services behind it. The browser sees a single origin."))
+A(("p", "Three things follow, and they are worth listing in this order:"))
+A(("ul", [
+    "**One port faces the internet instead of five.** Neither the database nor any service port is published at all.",
+    "**Cross-origin requests stop existing.** CORS is not configured more carefully; it becomes irrelevant, which is a better outcome than getting the headers right.",
+    "**TLS terminates in exactly one place**, so certificate renewal is one concern rather than five.",
+]))
+A(("p",
+   "The client is built with *relative* API paths rather than absolute URLs, so it "
+   "inherits whatever origin serves it. Changing the domain needs no rebuild of the "
+   "client &mdash; only the CORS configuration, which exists for non-browser callers."))
+A(("key", "The general principle",
+   "The best way to handle a class of problem is often to arrange things so the problem "
+   "cannot arise. CORS exists to police cross-origin requests; a single-origin topology "
+   "means there are none to police."))
+
+A(("h1", "5.12  Verifying by running, not by reasoning"))
+A(("p",
+   "Every service compiled. Ninety-six unit tests passed. The code had been reviewed "
+   "line by line. None of that established that the system worked, and running it "
+   "against a real Fabric network proved the point immediately by exposing two faults "
+   "that no amount of compiling or unit testing could have found."))
+A(("h2", "The service could not read its own credentials"))
+A(("p",
+   "Fabric's crypto material is `0700` directories with a `0600` private key, which is "
+   "exactly right for signing material. The service images run as a non-root user with "
+   "a different uid, which is exactly right for container hardening. Both decisions were "
+   "correct, and together they meant the blockchain service could not open its own "
+   "identity."))
+A(("p",
+   "The fix was to run that container **as the owner of the credentials it is given**, "
+   "rather than loosening permissions on a private key. Worth noticing: this was not a "
+   "bug in either decision. It was a bug in the space between them, which is where "
+   "integration faults usually live."))
+A(("h2", "The status update silently failed"))
+A(("p",
+   "Registration committed to the ledger, but the product was never promoted to "
+   "`REGISTERED`. The cause was `Invalid HTTP method: PATCH` &mdash; `HttpURLConnection` "
+   "has never supported PATCH, and it backed the HTTP client that had been chosen "
+   "earlier to work around an unrelated JDK problem. Apache HttpClient has neither "
+   "limitation."))
+A(("p",
+   "The instructive part is what happened while it was broken. The call is deliberately "
+   "best-effort and non-fatal, because a ledger write cannot be rolled back &mdash; so the "
+   "transaction committed, the failure was logged, and the user got a successful "
+   "response with a catalogue status that was merely stale. **The system degraded "
+   "exactly as designed while carrying a real bug.** That is what designing for failure "
+   "buys you."))
+A(("tip", "A strong answer to \"what did you learn?\"",
+   "*\"That compiling and passing unit tests tells you your logic is right, not that your "
+   "system works. Both bugs I found by running it were in the seams &mdash; file permissions "
+   "between the host and a container, and an HTTP verb an old client does not support. "
+   "Neither is visible from inside a unit test, because a unit test mocks away exactly "
+   "the things that broke.\"* This is a genuinely senior observation and very few "
+   "candidates make it."))
+
 A(("part", "Part VI — Security Analysis"))
 
 A(("h1", "6.1  Threat model"))
@@ -239,13 +302,13 @@ A(("ul", [
     "**`blockHash` is never populated**, because the Gateway client does not expose it. Capturing it requires a block event listener.",
     "**Fabric CA is not integrated**, per section 5.7.",
     "**No pagination.** Listing endpoints return every row, which will not survive a realistic catalogue.",
-    "**Chaincode has no unit tests.** The Java and TypeScript layers are tested; the Go contract is not, and it holds the rules that matter most.",
+    "**The multi-service workflow is only covered by a script that must be run by hand.** `scripts/smoke-test.sh` exercises the running stack over HTTP, but nothing runs it automatically. A continuous integration pipeline that stood the stack up and ran it on every push would catch cross-service regressions that unit tests cannot see.",
 ]))
 
 A(("h1", "7.2  What to build next, in order"))
 A(("ol", [
     "**Independently operated organisations.** Two organisations already endorse every transaction; the remaining gap is that one person administers both. Separating them is the highest-value change, because independence is what converts a demonstrated mechanism into a real trust guarantee.",
-    "**Chaincode unit tests** using the Fabric test harness &mdash; the ownership validation logic deserves direct coverage.",
+    "**Continuous integration** that builds the images, stands up the stack and runs the smoke script on every push.",
     "**Pagination and filtering** on all list endpoints.",
     "**Flyway migrations** replacing `ddl-auto`.",
     "**Rate limiting and account lockout** on the authentication endpoints.",
@@ -438,6 +501,50 @@ A(("p",
    "validation. It is optimistic concurrency control; the client retries. It matters here "
    "because two rapid ownership transfers of the same product would conflict.\""))
 
+A(("q", "Q. How did you test the chaincode?"))
+A(("p",
+   "\"23 tests at 82.6% statement coverage, with hand-written fakes for the Fabric stub "
+   "rather than generated mocks &mdash; the contract only touches four stub methods, so a "
+   "fake that embeds the interface and implements those four is smaller than the "
+   "generated alternative. Embedding matters: any method the contract calls that the "
+   "fake does not define panics, instead of quietly returning a zero value and letting "
+   "an untested path pass.\""))
+A(("p",
+   "\"Two of those tests assert *error wording*, which sounds odd until you see why. "
+   "The chaincode saying `does not exist` is what the blockchain service matches to "
+   "return a 404, which the fraud service reads as `BLOCKCHAIN_MISMATCH`. If someone "
+   "reworded that message, a counterfeit would silently start surfacing as a 502 "
+   "'cannot verify' instead of a verdict. Nothing else in the codebase would have "
+   "caught it, so the phrase is a contract between components rather than a message.\""))
+
+A(("q", "Q. Have you actually run this end to end, or just tested the parts?"))
+A(("p",
+   "\"Both, and running it mattered. 41 assertions pass against the running stack with a "
+   "live Fabric network &mdash; register on the ledger, confirm the transaction ID and "
+   "block number are real, verify as genuine, read the history back. Doing that found "
+   "two bugs that ninety-six passing unit tests had not: the container could not read "
+   "its own Fabric credentials because of a file-permission mismatch, and a status "
+   "update was failing because HttpURLConnection rejects PATCH. Both were in the seams "
+   "between components, which is precisely what unit tests mock away.\""))
+
+A(("q", "Q. How would you deploy this?"))
+A(("p",
+   "\"One VM running everything, because Fabric needs a peer somewhere and no mainstream "
+   "platform-as-a-service will host one. nginx terminates TLS and routes path prefixes "
+   "to the four services, so the browser talks to a single origin: one port exposed "
+   "instead of five, no cross-origin requests at all, and TLS in one place. The database "
+   "and service ports are not published. It needs about 8 GB of RAM &mdash; four JVMs plus "
+   "the Fabric network &mdash; and the scripts to provision it are in the repository.\""))
+
+A(("q", "Q. What would you do if the blockchain became a bottleneck?"))
+A(("p",
+   "\"Registration is the slow path, because it waits for a block to commit &mdash; a second "
+   "or two. The fix is already half-built: a product starts as `PENDING` and is promoted "
+   "to `REGISTERED` when the transaction commits, so making registration asynchronous is "
+   "a matter of returning immediately and letting a listener do the promotion. That "
+   "status field exists for exactly this reason. Reads are not a concern: verification "
+   "queries the world state through one peer and never touches the ordering service.\""))
+
 A(("h1", "8.5  Data and persistence"))
 
 A(("q", "Q. Why a database per service?"))
@@ -464,9 +571,10 @@ A(("h1", "8.6  Code quality and testing"))
 
 A(("q", "Q. How did you test this?"))
 A(("p",
-   "\"73 unit tests across the four services, plus an end-to-end smoke test script with 34 "
-   "HTTP assertions against the running stack. The tests I care most about are the ones "
-   "on the fraud engine &mdash; that an unverifiable product is *reported* as counterfeit "
+   "\"96 unit tests &mdash; 73 across the four Java services and 23 on the Go chaincode at "
+   "82.6% statement coverage &mdash; plus an end-to-end script that makes 41 HTTP assertions "
+   "against the running stack with a live Fabric network. The tests I care most about are "
+   "the ones on the fraud engine: that an unverifiable product is *reported* as counterfeit "
    "rather than throwing, and that a dependency outage is *not* reported as counterfeit. "
    "Those two are the core behaviour of the product.\""))
 
@@ -547,7 +655,7 @@ A(("p",
 A(("part", "Part IX — Cheat Sheet and Glossary"))
 
 A(("h1", "9.1  Draw this from memory"))
-A(("p", "If you can reproduce these three things on a whiteboard, you can hold any conversation about the project."))
+A(("p", "If you can reproduce these four diagrams on a whiteboard, you can hold any conversation about the project."))
 A(("h2", "1. The architecture"))
 A(("code", """
    React SPA
@@ -573,7 +681,18 @@ A(("code", """
    cap at 100    >= 80 COUNTERFEIT   >= 20 SUSPICIOUS   else GENUINE
    dependency down -> 502, never a verdict
 """))
-A(("h2", "3. The Fabric transaction lifecycle"))
+A(("h2", "3. The deployed topology"))
+A(("code", """
+   internet -> :443 nginx -> /            frontend
+                          -> /auth/       auth-service:8081
+                          -> /products/   product-service:8082
+                          -> /blockchain/ blockchain-service:8083
+                          -> /fraud/      fraud-service:8085
+
+   one origin, so no CORS.  database and service ports unpublished.
+   Fabric runs alongside on the same host.
+"""))
+A(("h2", "4. The Fabric transaction lifecycle"))
 A(("code", """
    PROPOSE -> ENDORSE (simulate, read-write set) -> ORDER (block)
            -> VALIDATE (policy + read-set versions) -> COMMIT
@@ -588,8 +707,9 @@ A(("table", [
     ["Fraud rules", "7"],
     ["Risk thresholds", "80 counterfeit, 20 suspicious"],
     ["Access / refresh token life", "15 minutes / 7 days"],
-    ["Unit tests", "73"],
-    ["Smoke-test assertions", "34"],
+    ["Unit tests", "96 &mdash; 73 Java, 23 Go chaincode"],
+    ["Chaincode coverage", "82.6% of statements"],
+    ["Smoke-test assertions", "41, all passing against a live ledger"],
     ["Chaincode transactions", "4 &mdash; register, transfer, verify, history"],
     ["Fabric / Gateway version", "2.5 LTS / 1.11"],
 ], [40, 60]))
