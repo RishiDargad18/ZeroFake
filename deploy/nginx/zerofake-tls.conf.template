@@ -1,0 +1,47 @@
+# ZeroFake reverse proxy — HTTPS.
+#
+# Rendered into zerofake.conf by deploy/setup-tls.sh, which substitutes
+# @DOMAIN@. Do not edit the rendered file; edit this template and re-run the
+# script, or the next renewal will overwrite your changes.
+
+upstream frontend           { server frontend:80; }
+upstream auth_service       { server auth-service:8081; }
+upstream product_service    { server product-service:8082; }
+upstream blockchain_service { server blockchain-service:8083; }
+upstream fraud_service      { server fraud-detection-service:8085; }
+
+limit_req_zone $binary_remote_addr zone=login_zone:10m rate=20r/m;
+limit_req_zone $binary_remote_addr zone=api_zone:10m   rate=30r/s;
+limit_req_status 429;
+
+server {
+    listen 80;
+    server_name @DOMAIN@;
+
+    # Renewals continue to validate over plain HTTP.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name @DOMAIN@;
+
+    ssl_certificate     /etc/letsencrypt/live/@DOMAIN@/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/@DOMAIN@/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    include /etc/nginx/snippets/zerofake-routes.conf;
+}

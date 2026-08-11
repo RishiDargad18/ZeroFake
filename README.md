@@ -231,6 +231,20 @@ ZeroFake
 
 ---
 
+## 🌐 Deploying to a server
+
+The stack above is for local development. To put ZeroFake on a single VM — Fabric, PostgreSQL, all four services and the web client behind one nginx reverse proxy — see [**docs/DEPLOYMENT.md**](docs/DEPLOYMENT.md):
+
+```bash
+./deploy/bootstrap-vm.sh                                      # Docker, Go, Fabric binaries
+./deploy/setup-fabric.sh                                      # network + chaincode
+cp deploy/.env.prod.example .env && nano .env                 # secrets
+docker compose -f deploy/docker-compose.prod.yml up -d --build
+./deploy/setup-tls.sh your-domain.com you@example.com         # optional
+```
+
+Only ports 80 and 443 are exposed; the browser talks to a single origin, so there are no cross-origin requests at all. Needs 8 GB RAM — Oracle Cloud's Always Free tier is the only free option large enough.
+
 ## 📖 Documentation
 
 [**docs/ZeroFake-Interview-Guide.pdf**](docs/ZeroFake-Interview-Guide.pdf) — a 38-page guide covering the architecture, every workflow end to end, the core concepts from first principles (JWT, Spring, JPA, blockchain, Hyperledger Fabric, Docker), the design decisions and their trade-offs, a security analysis, known limitations, and a question bank with model answers.
