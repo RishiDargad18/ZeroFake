@@ -159,7 +159,12 @@ Without it, `git clone` fails part-way through checkout with `Filename too long`
 cd services/auth-service && ./mvnw test
 ```
 
-73 tests across the four services. The context tests run against in-memory H2, so no database is required:
+96 tests: 73 across the four Java services, plus 23 on the Go chaincode. The context tests run against in-memory H2, so no database is required.
+
+```bash
+cd services/zerofake-chaincode && go test ./... -cover
+```
+
 
 | Suite | Covers |
 |---|---|
@@ -168,6 +173,7 @@ cd services/auth-service && ./mvnw test
 | `ChaincodeErrorsTest` | Telling "not on the ledger" (→ 404) apart from "peer unreachable" (→ 502) |
 | `JwtServiceTest` | The `userId`/`role` claim contract, issuer and signature rejection |
 | `QrCodeServiceImplTest` | QR payload is the product id alone; path traversal is refused |
+| `product_contract_test.go` | The chaincode rules a peer enforces: only the holder can transfer custody, status derives from the receiving role, verification writes nothing, and the error wording other services key on |
 
 ### Running without Docker
 
