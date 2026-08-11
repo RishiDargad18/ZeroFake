@@ -1,0 +1,181 @@
+name: zerofake
+
+# ZeroFake local deployment.
+#
+# Brings up PostgreSQL, all four backend services and the web client.
+#
+# The Hyperledger Fabric network is NOT started here: it runs from the
+# fabric-samples test-network on the host (or in WSL). The blockchain service
+# reaches it through host.docker.internal and reads its identity from the
+# crypto material mounted read-only at /fabric.
+#
+#   cp .env.example .env      # then edit FABRIC_CRYPTO_PATH and JWT_SECRET
+#   docker compose up --build
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: zerofake-postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [zerofake]
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    container_name: zerofake-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zerofake_auth
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - see .env.example}
+      JWT_ISSUER: ${JWT_ISSUER:-zerofake-auth-service}
+      SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-Password123!}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [zerofake]
+
+  product-service:
+    build:
+      context: ./services/product-service
+    container_name: zerofake-product
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zerofake_product
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - see .env.example}
+      JWT_ISSUER: ${JWT_ISSUER:-zerofake-auth-service}
+      QR_STORAGE_DIRECTORY: /app/data/qr-codes
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    volumes:
+      - qr-codes:/app/data/qr-codes
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [zerofake]
+
+  blockchain-service:
+    build:
+      context: ./services/blockchain-service
+    container_name: zerofake-blockchain
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zerofake_blockchain
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - see .env.example}
+      JWT_ISSUER: ${JWT_ISSUER:-zerofake-auth-service}
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      # The crypto material is mounted read-only at /fabric.
+      FABRIC_CRYPTO_PATH: /fabric
+      FABRIC_MSP_ID: ${FABRIC_MSP_ID:-Org1MSP}
+      FABRIC_CHANNEL_NAME: ${FABRIC_CHANNEL_NAME:-mychannel}
+      FABRIC_CHAINCODE_NAME: ${FABRIC_CHAINCODE_NAME:-zerofake}
+      FABRIC_PEER_ENDPOINT: ${FABRIC_PEER_ENDPOINT:-dns:///host.docker.internal:7051}
+      FABRIC_PEER_HOST_ALIAS: ${FABRIC_PEER_HOST_ALIAS:-peer0.org1.example.com}
+    volumes:
+      # Org1 peer organisation directory from your Fabric network.
+      - ${FABRIC_CRYPTO_PATH:-./fabric/organizations/peerOrganizations/org1.example.com}:/fabric:ro
+    extra_hosts:
+      # Lets the container reach a Fabric peer running on the host.
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [zerofake]
+
+  fraud-detection-service:
+    build:
+      context: ./services/fraud-detection-service
+    container_name: zerofake-fraud
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      blockchain-service:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zerofake_fraud
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - see .env.example}
+      JWT_ISSUER: ${JWT_ISSUER:-zerofake-auth-service}
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      BLOCKCHAIN_SERVICE_URL: http://blockchain-service:8083
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8085/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [zerofake]
+
+  frontend:
+    build:
+      context: ./zerofake-frontend
+      args:
+        # The browser calls these directly, so they are host-visible URLs.
+        VITE_AUTH_API: ${VITE_AUTH_API:-http://localhost:8081}
+        VITE_PRODUCT_API: ${VITE_PRODUCT_API:-http://localhost:8082}
+        VITE_BLOCKCHAIN_API: ${VITE_BLOCKCHAIN_API:-http://localhost:8083}
+        VITE_FRAUD_API: ${VITE_FRAUD_API:-http://localhost:8085}
+    container_name: zerofake-frontend
+    depends_on:
+      - auth-service
+      - product-service
+      - blockchain-service
+      - fraud-detection-service
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks: [zerofake]
+
+volumes:
+  postgres-data:
+  qr-codes:
+
+networks:
+  zerofake:
+    driver: bridge
