@@ -3,21 +3,39 @@ spring:
     name: blockchain-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/zerofake_blockchain
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zerofake_blockchain}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
 
+  jackson:
+    time-zone: UTC
+
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:INFO}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
 
 springdoc:
   api-docs:
@@ -25,16 +43,37 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+product:
+  service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+
+zerofake:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+jwt:
+  # Must match the authentication service exactly. This service validates
+  # tokens; it never issues them.
+  secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbi16ZXJvZmFrZS1obWFjLXNoYS1rZXktMjU2LWJpdHM=}
+  issuer: ${JWT_ISSUER:zerofake-auth-service}
+
+# Hyperledger Fabric connection.
+#
+# FABRIC_CRYPTO_PATH must point at the Org1 peer organisation directory of your
+# Fabric network, for example:
+#   <fabric-samples>/test-network/organizations/peerOrganizations/org1.example.com
+# The individual certificate and key paths are derived from it, and each one can
+# still be overridden individually if your layout differs.
 fabric:
-  msp-id: Org1MSP
-  channel-name: mychannel
-  chaincode-name: zerofake
-  crypto-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com
+  msp-id: ${FABRIC_MSP_ID:Org1MSP}
+  channel-name: ${FABRIC_CHANNEL_NAME:mychannel}
+  chaincode-name: ${FABRIC_CHAINCODE_NAME:zerofake}
 
-  cert-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\User1@org1.example.com\msp\signcerts\cert.pem
+  crypto-path: ${FABRIC_CRYPTO_PATH:./fabric/organizations/peerOrganizations/org1.example.com}
 
-  key-directory-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\User1@org1.example.com\msp\keystore
+  cert-path: ${FABRIC_CERT_PATH:${fabric.crypto-path}/users/User1@org1.example.com/msp/signcerts/cert.pem}
+  key-directory-path: ${FABRIC_KEY_DIRECTORY_PATH:${fabric.crypto-path}/users/User1@org1.example.com/msp/keystore}
+  tls-cert-path: ${FABRIC_TLS_CERT_PATH:${fabric.crypto-path}/peers/peer0.org1.example.com/tls/ca.crt}
 
-  tls-cert-path: \\wsl$\Ubuntu\home\rishi_dargad18\hyperledger\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\peers\peer0.org1.example.com\tls\ca.crt
-  peer-endpoint: dns:///localhost:7051
-  peer-host-alias: peer0.org1.example.com
+  peer-endpoint: ${FABRIC_PEER_ENDPOINT:dns:///localhost:7051}
+  peer-host-alias: ${FABRIC_PEER_HOST_ALIAS:peer0.org1.example.com}

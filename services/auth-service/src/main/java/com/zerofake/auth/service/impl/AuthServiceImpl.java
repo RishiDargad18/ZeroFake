@@ -1,13 +1,7 @@
 package com.zerofake.auth.service.impl;
-import com.zerofake.auth.exception.BadRequestException;
-import com.zerofake.auth.security.user.CustomUserDetails;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import java.time.LocalDateTime;
-import com.zerofake.auth.dto.common.ApiResponse;
+
+import com.zerofake.auth.config.JwtProperties;
+import com.zerofake.auth.constant.RoleType;
 import com.zerofake.auth.dto.request.LoginRequest;
 import com.zerofake.auth.dto.request.RefreshTokenRequest;
 import com.zerofake.auth.dto.request.RegisterRequest;
@@ -15,30 +9,34 @@ import com.zerofake.auth.dto.response.AuthResponse;
 import com.zerofake.auth.dto.response.RegisterResponse;
 import com.zerofake.auth.dto.response.TokenResponse;
 import com.zerofake.auth.dto.response.UserResponse;
+import com.zerofake.auth.entity.RefreshToken;
 import com.zerofake.auth.entity.User;
+import com.zerofake.auth.exception.BadRequestException;
+import com.zerofake.auth.exception.ConflictException;
+import com.zerofake.auth.exception.UnauthorizedException;
 import com.zerofake.auth.mapper.UserMapper;
 import com.zerofake.auth.repository.RefreshTokenRepository;
 import com.zerofake.auth.repository.UserRepository;
 import com.zerofake.auth.security.jwt.JwtService;
+import com.zerofake.auth.security.user.CustomUserDetails;
 import com.zerofake.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.zerofake.auth.config.JwtProperties;
-import com.zerofake.auth.entity.RefreshToken;
-import com.zerofake.auth.security.user.CustomUserDetails;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class AuthServiceImpl implements AuthService {
+
     private final JwtProperties jwtProperties;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -47,12 +45,26 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
+    /**
+     * Registers a new user.
+     *
+     * <p>Self-service registration is restricted to {@link RoleType#ROLE_CUSTOMER}.
+     * Supply chain roles and administrator accounts represent privileged positions
+     * in the chain of custody and may only be created by an existing administrator.
+     */
     @Override
     public RegisterResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException(
-                    "User already exists with email: " + request.getEmail()
+            throw new ConflictException(
+                    "A user already exists with email: " + request.getEmail()
+            );
+        }
+
+        if (request.getRole() != RoleType.ROLE_CUSTOMER && !isCurrentUserAdmin()) {
+            throw new BadRequestException(
+                    "Self-registration is only permitted for ROLE_CUSTOMER. "
+                            + "Privileged roles must be created by an administrator."
             );
         }
 
@@ -66,10 +78,26 @@ public class AuthServiceImpl implements AuthService {
         return userMapper.toRegisterResponse(savedUser);
     }
 
+    private boolean isCurrentUserAdmin() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        return authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        RoleType.ROLE_ADMIN.name().equals(authority.getAuthority()));
+    }
+
     @Override
-    @Transactional
     public AuthResponse login(LoginRequest request) {
 
+        // Throws an AuthenticationException on bad credentials or a disabled
+        // account; both are translated to 401 by the global exception handler.
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -78,9 +106,7 @@ public class AuthServiceImpl implements AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "User not found with email: " + request.getEmail()
-                ));
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password."));
 
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
@@ -92,7 +118,7 @@ public class AuthServiceImpl implements AuthService {
 
         RefreshToken token = refreshTokenRepository
                 .findByUser(user)
-                .orElse(new RefreshToken());
+                .orElseGet(RefreshToken::new);
 
         token.setUser(user);
         token.setToken(refreshToken);
@@ -105,16 +131,16 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenRepository.save(token);
 
-        TokenResponse tokenResponse = new TokenResponse();
-        tokenResponse.setAccessToken(accessToken);
-        tokenResponse.setRefreshToken(refreshToken);
-        tokenResponse.setExpiresIn(jwtProperties.getAccessTokenExpiration());
+        TokenResponse tokenResponse = TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .expiresIn(jwtProperties.getAccessTokenExpiration())
+                .build();
 
-        AuthResponse response = new AuthResponse();
-        response.setToken(tokenResponse);
-        response.setUser(userMapper.toUserResponse(user));
-
-        return response;
+        return AuthResponse.builder()
+                .token(tokenResponse)
+                .user(userMapper.toUserResponse(user))
+                .build();
     }
 
     @Override
@@ -137,55 +163,44 @@ public class AuthServiceImpl implements AuthService {
         User user = refreshToken.getUser();
 
         UserDetails userDetails = new CustomUserDetails(user);
-        System.out.println("======================================");
-        System.out.println("DB Token      : " + refreshToken.getToken());
-        System.out.println("Request Token : " + request.getRefreshToken());
-        System.out.println("DB Email      : " + user.getEmail());
-        System.out.println("JWT Email     : " + jwtService.extractUsername(request.getRefreshToken()));
-        System.out.println("======================================");
+
         if (!jwtService.isTokenValid(request.getRefreshToken(), userDetails)) {
-            throw new IllegalArgumentException("JWT VALIDATION FAILED");
+            throw new BadRequestException("Refresh token is no longer valid.");
         }
 
         String accessToken = jwtService.generateAccessToken(userDetails);
 
-        TokenResponse response = new TokenResponse();
-        response.setAccessToken(accessToken);
-        response.setRefreshToken(refreshToken.getToken());
-        response.setExpiresIn(jwtProperties.getAccessTokenExpiration());
-
-        return response;
+        return TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .expiresIn(jwtProperties.getAccessTokenExpiration())
+                .build();
     }
 
     @Override
-    public ApiResponse<Void> logout() {
+    public void logout() {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails customUserDetails) {
+        if (authentication != null
+                && authentication.getPrincipal() instanceof CustomUserDetails customUserDetails) {
             refreshTokenRepository.deleteByUser(customUserDetails.getUser());
         }
 
         SecurityContextHolder.clearContext();
-
-        return ApiResponse.<Void>builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.OK.value())
-                .success(true)
-                .message("Logged out successfully.")
-                .data(null)
-                .build();
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser() {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null
                 || !(authentication.getPrincipal() instanceof CustomUserDetails customUserDetails)) {
-            throw new IllegalStateException("No authenticated user found.");
+            throw new UnauthorizedException("No authenticated user found.");
         }
 
         return userMapper.toUserResponse(customUserDetails.getUser());

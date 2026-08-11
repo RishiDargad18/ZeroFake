@@ -36,12 +36,12 @@ func (p *ProductContract) RegisterProduct(
 		return nil, err
 	}
 
-	existingProduct, err := ctx.GetStub().GetState(productID)
+	exists, err := p.productExists(ctx, productID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check product existence: %w", err)
+		return nil, err
 	}
 
-	if existingProduct != nil {
+	if exists {
 		return nil, fmt.Errorf("product with ID '%s' already exists", productID)
 	}
 

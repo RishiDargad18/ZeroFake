@@ -3,46 +3,53 @@ package com.zerofake.blockchain.fabric;
 import com.zerofake.blockchain.config.FabricProperties;
 import lombok.RequiredArgsConstructor;
 import org.hyperledger.fabric.client.Contract;
-import org.hyperledger.fabric.client.Gateway;
 import org.hyperledger.fabric.client.Network;
 import org.hyperledger.fabric.client.Proposal;
 import org.springframework.stereotype.Service;
 
+/**
+ * Resolves the ZeroFake smart contract on the configured channel.
+ */
 @Service
 @RequiredArgsConstructor
 public class FabricContractService {
 
     private final FabricGatewayService fabricGatewayService;
-
     private final FabricProperties fabricProperties;
 
-    private Contract contract;
+    private final Object lock = new Object();
 
-    public Contract getContract() throws Exception {
+    private volatile Contract contract;
 
-        if (contract != null) {
-            return contract;
+    public Contract getContract() {
+
+        Contract current = contract;
+
+        if (current != null) {
+            return current;
         }
 
-        Gateway gateway = fabricGatewayService.getGateway();
+        synchronized (lock) {
 
-        Network network = gateway.getNetwork(
-                fabricProperties.getChannelName()
-        );
+            if (contract != null) {
+                return contract;
+            }
 
-        contract = network.getContract(
-                fabricProperties.getChaincodeName()
-        );
+            Network network = fabricGatewayService
+                    .getGateway()
+                    .getNetwork(fabricProperties.getChannelName());
 
-        return contract;
+            contract = network.getContract(fabricProperties.getChaincodeName());
+
+            return contract;
+        }
     }
 
     /**
-     * Creates a proposal for the specified chaincode transaction.
-     * The caller is responsible for adding arguments, endorsing,
-     * submitting, and obtaining the Fabric transaction ID.
+     * Creates a proposal for the named chaincode transaction. The caller adds
+     * arguments, endorses and submits it.
      */
-    public Proposal.Builder newProposal(String transactionName) throws Exception {
+    public Proposal.Builder newProposal(String transactionName) {
         return getContract().newProposal(transactionName);
     }
 }

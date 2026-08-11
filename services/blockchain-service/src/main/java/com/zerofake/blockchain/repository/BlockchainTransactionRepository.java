@@ -13,6 +13,12 @@ public interface BlockchainTransactionRepository extends JpaRepository<Blockchai
 
     Optional<BlockchainTransaction> findByTransactionId(String transactionId);
 
+    Optional<BlockchainTransaction> findFirstByProductIdAndTransactionTypeAndStatus(
+            UUID productId,
+            TransactionType transactionType,
+            BlockchainStatus status
+    );
+
     List<BlockchainTransaction> findByProductId(UUID productId);
 
     List<BlockchainTransaction> findByProductIdOrderByCreatedAtAsc(UUID productId);

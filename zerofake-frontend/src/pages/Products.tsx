@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useUpdateProduct } from "@/hooks/useUpdateProduct";
 import { toast } from "react-hot-toast";
-import { productService } from "@/services/productService";
 import { useCategories } from "@/hooks/useCategories";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { SelectOption } from "@/types/common";
@@ -223,17 +222,13 @@ const handleRegisterBlockchain = async (
   product: ProductResponse
 ) => {
   try {
+    // The blockchain service marks the product REGISTERED in the catalogue
+    // once the transaction commits, so no follow-up call is needed here.
     await registerProduct({
       productId: product.id,
       manufacturerId:
         product.manufacturerId,
     });
-
-    try {
-      await productService.updateBlockchainStatus(product.id, "SUCCESS");
-    } catch (statusError) {
-      console.error("Failed to update status off-chain:", statusError);
-    }
 
     toast.success(
       "Product registered on blockchain successfully."
@@ -470,7 +465,7 @@ const handleCreateProduct = async (
         cell: (product) => (
             <GlassBadge
             variant={
-                product.blockchainStatus === "SUCCESS"
+                product.blockchainStatus === "REGISTERED"
                 ? "success"
                 : product.blockchainStatus === "FAILED"
                 ? "danger"

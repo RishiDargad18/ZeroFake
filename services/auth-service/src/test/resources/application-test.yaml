@@ -1,0 +1,24 @@
+# Test profile.
+#
+# Overrides only what must differ from the main configuration: an in-memory
+# database so that `mvn test` needs no external services, and no seeding, since
+# demonstration data is a deployment convenience rather than something a context
+# test should assert on. Everything else is inherited from application.yaml.
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:zerofake;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+zerofake:
+  seed:
+    enabled: false

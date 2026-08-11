@@ -2,11 +2,14 @@ package com.zerofake.blockchain.exception;
 
 import com.zerofake.blockchain.dto.common.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -15,17 +18,18 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private static final String GENERIC_ERROR_MESSAGE =
+            "An unexpected error occurred. Please try again later.";
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<ApiError>> handleResourceNotFoundException(
             ResourceNotFoundException exception,
             HttpServletRequest request
     ) {
-        return buildErrorResponse(
-                HttpStatus.NOT_FOUND,
-                exception.getMessage(),
-                request,
-                null
-        );
+        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(ConflictException.class)
@@ -33,12 +37,7 @@ public class GlobalExceptionHandler {
             ConflictException exception,
             HttpServletRequest request
     ) {
-        return buildErrorResponse(
-                HttpStatus.CONFLICT,
-                exception.getMessage(),
-                request,
-                null
-        );
+        return buildErrorResponse(HttpStatus.CONFLICT, exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(BadRequestException.class)
@@ -46,12 +45,7 @@ public class GlobalExceptionHandler {
             BadRequestException exception,
             HttpServletRequest request
     ) {
-        return buildErrorResponse(
-                HttpStatus.BAD_REQUEST,
-                exception.getMessage(),
-                request,
-                null
-        );
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -59,9 +53,37 @@ public class GlobalExceptionHandler {
             UnauthorizedException exception,
             HttpServletRequest request
     ) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, exception.getMessage(), request, null);
+    }
+
+    /**
+     * The blockchain network could not service the request. This is an upstream
+     * failure, not a fault in the caller's request, so it is reported as 502.
+     */
+    @ExceptionHandler(BlockchainOperationException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleBlockchainOperationException(
+            BlockchainOperationException exception,
+            HttpServletRequest request
+    ) {
+
+        log.error("Blockchain operation failed for {}", request.getRequestURI(), exception);
+
         return buildErrorResponse(
-                HttpStatus.UNAUTHORIZED,
+                HttpStatus.BAD_GATEWAY,
                 exception.getMessage(),
+                request,
+                null
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleTypeMismatch(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Invalid value for parameter '" + exception.getName() + "'.",
                 request,
                 null
         );
@@ -78,7 +100,7 @@ public class GlobalExceptionHandler {
         exception.getBindingResult()
                 .getFieldErrors()
                 .forEach(fieldError ->
-                        validationErrors.put(
+                        validationErrors.putIfAbsent(
                                 fieldError.getField(),
                                 fieldError.getDefaultMessage()
                         ));
@@ -97,11 +119,11 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
-        exception.printStackTrace();
+        log.error("Unhandled exception while processing {}", request.getRequestURI(), exception);
 
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                exception.getMessage(),
+                GENERIC_ERROR_MESSAGE,
                 request,
                 null
         );
@@ -133,9 +155,6 @@ public class GlobalExceptionHandler {
                 .data(error)
                 .build();
 
-        return ResponseEntity
-                .status(status)
-                .body(response);
+        return ResponseEntity.status(status).body(response);
     }
-
 }

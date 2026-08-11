@@ -17,7 +17,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -33,16 +37,23 @@ public class AuthController {
     @Operation(summary = "Register a new user")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "User registered successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request or privileged role requested"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Email already registered")
     })
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request
     ) {
 
+        RegisterResponse response = authService.register(request);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(authService.register(request));
+                .body(ApiResponse.success(
+                        HttpStatus.CREATED,
+                        "User registered successfully.",
+                        response
+                ));
     }
 
     @Operation(summary = "Authenticate a user")
@@ -51,12 +62,12 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid credentials")
     })
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
 
         return ResponseEntity.ok(
-                authService.login(request)
+                ApiResponse.ok("Login successful.", authService.login(request))
         );
     }
 
@@ -66,12 +77,15 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid refresh token")
     })
     @PostMapping("/refresh")
-    public ResponseEntity<TokenResponse> refreshToken(
+    public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
 
         return ResponseEntity.ok(
-                authService.refreshToken(request)
+                ApiResponse.ok(
+                        "Access token refreshed successfully.",
+                        authService.refreshToken(request)
+                )
         );
     }
 
@@ -84,8 +98,10 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout() {
 
+        authService.logout();
+
         return ResponseEntity.ok(
-                authService.logout()
+                ApiResponse.ok("Logged out successfully.", null)
         );
     }
 
@@ -96,10 +112,13 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser() {
+    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
 
         return ResponseEntity.ok(
-                authService.getCurrentUser()
+                ApiResponse.ok(
+                        "User details retrieved successfully.",
+                        authService.getCurrentUser()
+                )
         );
     }
 }

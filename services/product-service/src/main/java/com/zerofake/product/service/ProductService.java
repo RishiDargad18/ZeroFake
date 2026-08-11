@@ -2,7 +2,6 @@ package com.zerofake.product.service;
 
 import com.zerofake.product.dto.request.CreateProductRequest;
 import com.zerofake.product.dto.request.UpdateProductRequest;
-import com.zerofake.product.dto.common.ApiResponse;
 import com.zerofake.product.dto.response.ProductResponse;
 
 import java.util.List;
@@ -18,7 +17,7 @@ public interface ProductService {
 
     ProductResponse updateProduct(UUID id, UpdateProductRequest request);
 
-    ApiResponse<Void> deleteProduct(UUID id);
+    void deleteProduct(UUID id);
 
     List<ProductResponse> getProductsByCategory(UUID categoryId);
 
@@ -26,4 +25,5 @@ public interface ProductService {
 
     ProductResponse updateBlockchainStatus(UUID id, String status);
 
+    byte[] getQrCodeImage(UUID id);
 }

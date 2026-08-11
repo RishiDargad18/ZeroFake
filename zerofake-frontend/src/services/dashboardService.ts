@@ -4,66 +4,97 @@ import { fraudApi } from "@/api/fraudApi";
 import type { DashboardStatistics } from "@/types/dashboard";
 import type { UserResponse } from "@/types/auth";
 
-class DashboardService {
-  async getStatistics(user: UserResponse): Promise<DashboardStatistics> {
-    let productsRegistered = 0;
-    let blockchainTransactions = 0;
-    let productVerifications = 0;
-    let fraudReports = 0;
+/**
+ * Builds the dashboard counters.
+ *
+ * Each source is fetched independently so that one unavailable — or one the
+ * signed-in role is not permitted to read — degrades that single tile rather
+ * than blanking the whole dashboard. Aggregated fraud intelligence is
+ * restricted to administrators and manufacturers, so a customer receives 403
+ * on those endpoints by design.
+ */
+async function safely<T>(
+  load: () => Promise<T>,
+  fallback: T,
+  label: string
+): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    console.warn(`Dashboard: could not load ${label}.`, error);
+    return fallback;
+  }
+}
 
+class DashboardService {
+  async getStatistics(
+    user: UserResponse
+  ): Promise<DashboardStatistics> {
     const isAdmin = user?.role === "ROLE_ADMIN";
 
-    try {
-      const prodRes = await productApi.getAllProducts();
-      let products = prodRes.data || [];
+    const products = await safely(
+      async () => (await productApi.getAllProducts()).data ?? [],
+      [],
+      "products"
+    );
 
-      const txRes = await blockchainApi.getAllTransactions();
-      let txs = txRes || [];
+    const transactions = await safely(
+      async () => (await blockchainApi.getAllTransactions()).data ?? [],
+      [],
+      "blockchain transactions"
+    );
 
-      if (!isAdmin && user) {
-        const userTxs = txs.filter(tx => tx.performedBy === user.id);
-        const relatedProductIds = new Set(userTxs.map(tx => tx.productId));
+    // Non-administrators only see what they are involved in: products they
+    // manufacture, and transactions they performed.
+    const visibleProducts = isAdmin
+      ? products
+      : products.filter((product) => {
+          const ownsProduct = product.manufacturerId === user.id;
 
-        products.forEach(p => {
-          if (p.manufacturerId === user.id) {
-            relatedProductIds.add(p.id);
-          }
+          const actedOnProduct = transactions.some(
+            (tx) => tx.productId === product.id && tx.performedBy === user.id
+          );
+
+          return ownsProduct || actedOnProduct;
         });
 
-        products = products.filter(p => relatedProductIds.has(p.id));
-        txs = txs.filter(tx => relatedProductIds.has(tx.productId));
-      }
+    const visibleProductIds = new Set(
+      visibleProducts.map((product) => product.id)
+    );
 
-      productsRegistered = products.length;
-      blockchainTransactions = txs.length;
+    const visibleTransactions = isAdmin
+      ? transactions
+      : transactions.filter((tx) => visibleProductIds.has(tx.productId));
 
-      const logsRes = await fraudApi.getVerificationLogs();
-      let logs = logsRes.data || [];
-      if (!isAdmin && user) {
-        const productIds = new Set(products.map(p => p.id));
-        logs = logs.filter(log => productIds.has(log.productId));
-      }
-      productVerifications = logs.length;
+    const logs = await safely(
+      async () => (await fraudApi.getVerificationLogs()).data ?? [],
+      [],
+      "verification logs"
+    );
 
-      const fraudRes = await fraudApi.getFraudReports();
-      let reports = fraudRes.data || [];
-      if (!isAdmin && user) {
-        const productIds = new Set(products.map(p => p.id));
-        reports = reports.filter(report => productIds.has(report.productId));
-      }
-      fraudReports = reports.length;
-    } catch (err) {
-      console.error("Failed to calculate dashboard statistics:", err);
-    }
+    const reports = await safely(
+      async () => (await fraudApi.getFraudReports()).data ?? [],
+      [],
+      "fraud reports"
+    );
+
+    const visibleLogs = isAdmin
+      ? logs
+      : logs.filter((log) => visibleProductIds.has(log.productId));
+
+    const visibleReports = isAdmin
+      ? reports
+      : reports.filter((report) =>
+          visibleProductIds.has(report.productId)
+        );
 
     return {
-      productsRegistered,
-      blockchainTransactions,
-      productVerifications,
-      fraudReports,
+      productsRegistered: visibleProducts.length,
+      blockchainTransactions: visibleTransactions.length,
+      productVerifications: visibleLogs.length,
+      fraudReports: visibleReports.length,
     };
   }
 }
 
-export const dashboardService =
-  new DashboardService();
+export const dashboardService = new DashboardService();

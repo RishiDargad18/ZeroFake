@@ -1,6 +1,5 @@
 package com.zerofake.auth.service;
 
-import com.zerofake.auth.dto.common.ApiResponse;
 import com.zerofake.auth.dto.request.LoginRequest;
 import com.zerofake.auth.dto.request.RefreshTokenRequest;
 import com.zerofake.auth.dto.request.RegisterRequest;
@@ -17,7 +16,7 @@ public interface AuthService {
 
     TokenResponse refreshToken(RefreshTokenRequest request);
 
-    ApiResponse<Void> logout();
+    void logout();
 
     UserResponse getCurrentUser();
 }

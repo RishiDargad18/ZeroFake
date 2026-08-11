@@ -2,6 +2,7 @@ package com.zerofake.blockchain.controller;
 
 import com.zerofake.blockchain.constant.BlockchainStatus;
 import com.zerofake.blockchain.constant.TransactionType;
+import com.zerofake.blockchain.dto.common.ApiResponse;
 import com.zerofake.blockchain.dto.request.RegisterProductRequest;
 import com.zerofake.blockchain.dto.request.TransferOwnershipRequest;
 import com.zerofake.blockchain.dto.request.VerifyProductRequest;
@@ -10,12 +11,19 @@ import com.zerofake.blockchain.dto.response.ProductHistoryResponse;
 import com.zerofake.blockchain.dto.response.VerificationResponse;
 import com.zerofake.blockchain.service.BlockchainService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,135 +31,140 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/blockchain")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 @Tag(
         name = "Blockchain API",
-        description = "APIs for interacting with the Hyperledger Fabric blockchain."
+        description = "Ledger operations backed by Hyperledger Fabric."
 )
 public class BlockchainController {
 
     private final BlockchainService blockchainService;
 
-    @PostMapping("/register-product")
     @Operation(
-            summary = "Register Product",
-            description = "Registers a product on the Hyperledger Fabric blockchain."
+            summary = "Register a product on the blockchain",
+            description = "Anchors the product's identity on the ledger and marks it "
+                    + "REGISTERED in the product service."
     )
-    @ApiResponse(responseCode = "200", description = "Product registered successfully.")
-    public ResponseEntity<BlockchainTransactionResponse> registerProduct(
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Product registered on the ledger"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Product is already registered"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "The blockchain network could not service the request")
+    })
+    @PostMapping("/register-product")
+    public ResponseEntity<ApiResponse<BlockchainTransactionResponse>> registerProduct(
             @Valid @RequestBody RegisterProductRequest request) {
 
-        return ResponseEntity.ok(
-                blockchainService.registerProduct(request)
-        );
+        BlockchainTransactionResponse response = blockchainService.registerProduct(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(
+                        HttpStatus.CREATED,
+                        "Product registered on the blockchain.",
+                        response
+                ));
     }
 
+    @Operation(summary = "Transfer product ownership on the blockchain")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ownership transferred"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product is not registered on the ledger"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "The blockchain network could not service the request")
+    })
     @PostMapping("/transfer-ownership")
-    @Operation(
-            summary = "Transfer Ownership",
-            description = "Transfers product ownership on the Hyperledger Fabric blockchain."
-    )
-    @ApiResponse(responseCode = "200", description = "Ownership transferred successfully.")
-    public ResponseEntity<BlockchainTransactionResponse> transferOwnership(
+    public ResponseEntity<ApiResponse<BlockchainTransactionResponse>> transferOwnership(
             @Valid @RequestBody TransferOwnershipRequest request) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Ownership transferred successfully.",
                 blockchainService.transferOwnership(request)
-        );
+        ));
     }
 
-    @PostMapping("/verify-product")
     @Operation(
-            summary = "Verify Product",
-            description = "Verifies product authenticity using the Hyperledger Fabric blockchain."
+            summary = "Verify a product against the ledger",
+            description = "Reads the product's current on-chain state. A 404 means the "
+                    + "product has no blockchain identity, which the fraud detection "
+                    + "service treats as a counterfeit signal."
     )
-    @ApiResponse(responseCode = "200", description = "Product verification completed.")
-    public ResponseEntity<VerificationResponse> verifyProduct(
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product state returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product is not registered on the ledger"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "The blockchain network could not service the request")
+    })
+    @PostMapping("/verify-product")
+    public ResponseEntity<ApiResponse<VerificationResponse>> verifyProduct(
             @Valid @RequestBody VerifyProductRequest request) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Product verification completed.",
                 blockchainService.verifyProduct(request)
-        );
+        ));
     }
 
+    @Operation(summary = "Retrieve the immutable ledger history of a product")
     @GetMapping("/products/{productId}/history")
-    @Operation(
-            summary = "Get Product History",
-            description = "Retrieves the complete blockchain history of a product."
-    )
-    @ApiResponse(responseCode = "200", description = "Product history retrieved successfully.")
-    public ResponseEntity<ProductHistoryResponse> getProductHistory(
+    public ResponseEntity<ApiResponse<ProductHistoryResponse>> getProductHistory(
             @PathVariable UUID productId) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Product history retrieved successfully.",
                 blockchainService.getProductHistory(productId)
-        );
+        ));
     }
 
+    @Operation(summary = "Retrieve all blockchain transaction records")
     @GetMapping("/transactions")
-    @Operation(
-            summary = "Get All Transactions",
-            description = "Retrieves all blockchain transaction audit logs."
-    )
-    @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully.")
-    public ResponseEntity<List<BlockchainTransactionResponse>> getAllTransactions() {
-        return ResponseEntity.ok(
+    public ResponseEntity<ApiResponse<List<BlockchainTransactionResponse>>> getAllTransactions() {
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Transactions retrieved successfully.",
                 blockchainService.getAllTransactions()
-        );
+        ));
     }
 
+    @Operation(summary = "Retrieve a transaction record by Fabric transaction ID")
     @GetMapping("/transactions/{transactionId}")
-    @Operation(
-            summary = "Get Transaction by Transaction ID",
-            description = "Retrieves blockchain transaction metadata by Fabric transaction ID."
-    )
-    @ApiResponse(responseCode = "200", description = "Transaction retrieved successfully.")
-    public ResponseEntity<BlockchainTransactionResponse> getTransactionByTransactionId(
+    public ResponseEntity<ApiResponse<BlockchainTransactionResponse>> getTransactionByTransactionId(
             @PathVariable String transactionId) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Transaction retrieved successfully.",
                 blockchainService.getTransactionByTransactionId(transactionId)
-        );
+        ));
     }
 
+    @Operation(summary = "Retrieve all transaction records for a product")
     @GetMapping("/transactions/product/{productId}")
-    @Operation(
-            summary = "Get Transactions by Product",
-            description = "Retrieves all blockchain transactions associated with a product."
-    )
-    @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully.")
-    public ResponseEntity<List<BlockchainTransactionResponse>> getTransactionsByProductId(
+    public ResponseEntity<ApiResponse<List<BlockchainTransactionResponse>>> getTransactionsByProductId(
             @PathVariable UUID productId) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Transactions retrieved successfully.",
                 blockchainService.getTransactionsByProductId(productId)
-        );
+        ));
     }
 
+    @Operation(summary = "Retrieve transaction records by status")
     @GetMapping("/transactions/status/{status}")
-    @Operation(
-            summary = "Get Transactions by Status",
-            description = "Retrieves blockchain transactions filtered by blockchain status."
-    )
-    @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully.")
-    public ResponseEntity<List<BlockchainTransactionResponse>> getTransactionsByStatus(
+    public ResponseEntity<ApiResponse<List<BlockchainTransactionResponse>>> getTransactionsByStatus(
             @PathVariable BlockchainStatus status) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Transactions retrieved successfully.",
                 blockchainService.getTransactionsByStatus(status)
-        );
+        ));
     }
 
+    @Operation(summary = "Retrieve transaction records by type")
     @GetMapping("/transactions/type/{transactionType}")
-    @Operation(
-            summary = "Get Transactions by Type",
-            description = "Retrieves blockchain transactions filtered by transaction type."
-    )
-    @ApiResponse(responseCode = "200", description = "Transactions retrieved successfully.")
-    public ResponseEntity<List<BlockchainTransactionResponse>> getTransactionsByTransactionType(
+    public ResponseEntity<ApiResponse<List<BlockchainTransactionResponse>>> getTransactionsByTransactionType(
             @PathVariable TransactionType transactionType) {
 
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Transactions retrieved successfully.",
                 blockchainService.getTransactionsByTransactionType(transactionType)
-        );
+        ));
     }
 }

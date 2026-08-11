@@ -8,6 +8,9 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+/**
+ * The on-chain state of a product as reported by the blockchain service.
+ */
 @Getter
 @Setter
 @Builder
@@ -21,6 +24,15 @@ public class VerificationResponse {
 
     private String message;
 
-    private String transactionId;
+    private UUID manufacturerId;
 
+    private UUID currentOwnerId;
+
+    private String currentOwnerRole;
+
+    private String productStatus;
+
+    private String registeredAt;
+
+    private String lastUpdatedAt;
 }

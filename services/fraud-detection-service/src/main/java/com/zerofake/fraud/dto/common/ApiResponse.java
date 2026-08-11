@@ -5,19 +5,23 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 
+/**
+ * Standard response envelope used by every ZeroFake REST endpoint.
+ */
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
+@Builder
 @AllArgsConstructor
 public class ApiResponse<T> {
 
     private LocalDateTime timestamp;
 
-    private Integer status;
+    private int status;
 
     private Boolean success;
 
@@ -25,4 +29,22 @@ public class ApiResponse<T> {
 
     private T data;
 
+    public static <T> ApiResponse<T> success(
+            HttpStatus status,
+            String message,
+            T data
+    ) {
+
+        return ApiResponse.<T>builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .success(true)
+                .message(message)
+                .data(data)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> ok(String message, T data) {
+        return success(HttpStatus.OK, message, data);
+    }
 }

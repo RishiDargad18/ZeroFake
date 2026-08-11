@@ -9,7 +9,9 @@ export type FraudType =
 
 export type FraudStatus =
   | "OPEN"
-  | "UNDER_INVESTIGATION"
+  | "UNDER_REVIEW"
+  | "CONFIRMED"
+  | "FALSE_POSITIVE"
   | "RESOLVED";
 
 export interface FraudReportResponse {
@@ -19,4 +21,11 @@ export interface FraudReportResponse {
   status: FraudStatus;
   riskScore: number;
   detectedAt: string;
+}
+
+export interface FraudReportRequest {
+  productId: string;
+  /** Optional: defaults to SUSPICIOUS_ACTIVITY when the reporter cannot classify it. */
+  fraudType?: FraudType;
+  description: string;
 }

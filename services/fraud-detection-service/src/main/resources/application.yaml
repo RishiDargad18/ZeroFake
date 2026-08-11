@@ -3,31 +3,64 @@ spring:
     name: fraud-detection-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/zerofake_fraud
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zerofake_fraud}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
 
+  jackson:
+    time-zone: UTC
+
 server:
-  port: 8085
+  port: ${SERVER_PORT:8085}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:INFO}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
 
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
 product:
   service:
-    url: http://localhost:8082
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
 
 blockchain:
   service:
-    url: http://localhost:8083
+    url: ${BLOCKCHAIN_SERVICE_URL:http://localhost:8083}
+
+zerofake:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  fraud:
+    # A verification at or above this score is treated as fraudulent and
+    # raises a fraud report.
+    risk-threshold: ${FRAUD_RISK_THRESHOLD:80}
+    # Below this score a verification is reported as genuine.
+    suspicious-threshold: ${FRAUD_SUSPICIOUS_THRESHOLD:20}
+
+jwt:
+  secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbi16ZXJvZmFrZS1obWFjLXNoYS1rZXktMjU2LWJpdHM=}
+  issuer: ${JWT_ISSUER:zerofake-auth-service}

@@ -6,12 +6,14 @@ import com.zerofake.fraud.repository.ScanHistoryRepository;
 import com.zerofake.fraud.service.ScanHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ScanHistoryServiceImpl implements ScanHistoryService {
 
     private final ScanHistoryRepository scanHistoryRepository;

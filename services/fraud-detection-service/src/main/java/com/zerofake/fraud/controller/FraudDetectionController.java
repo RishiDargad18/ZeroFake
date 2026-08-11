@@ -12,16 +12,21 @@ import com.zerofake.fraud.service.ScanHistoryService;
 import com.zerofake.fraud.service.VerificationLogService;
 import com.zerofake.fraud.service.VerificationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import lombok.RequiredArgsConstructor;
-
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,7 +34,11 @@ import java.util.UUID;
 @RequestMapping("/api/v1/fraud")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "Fraud Detection", description = "Fraud detection, verification, fraud reports and scan history APIs")
+@SecurityRequirement(name = "Bearer Authentication")
+@Tag(
+        name = "Fraud Detection",
+        description = "Product verification, fraud reports, verification logs and scan history"
+)
 public class FraudDetectionController {
 
     private final VerificationService verificationService;
@@ -37,25 +46,27 @@ public class FraudDetectionController {
     private final VerificationLogService verificationLogService;
     private final ScanHistoryService scanHistoryService;
 
-    @Operation(summary = "Verify product authenticity")
+    @Operation(
+            summary = "Verify product authenticity",
+            description = "Runs every fraud rule against the scan and returns a verdict. "
+                    + "The scanning user is taken from the access token."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Verification completed"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "A service required for verification is unavailable")
+    })
     @PostMapping("/verify")
     public ResponseEntity<ApiResponse<VerificationResponse>> verifyProduct(
             @Valid @RequestBody VerifyProductRequest request) {
 
-        VerificationResponse response = verificationService.verifyProduct(request);
-
-        return ResponseEntity.ok(
-                ApiResponse.<VerificationResponse>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Product verification completed successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Product verification completed.",
+                verificationService.verifyProduct(request)
+        ));
     }
 
-    @Operation(summary = "Create fraud report")
+    @Operation(summary = "Raise a fraud report")
     @PostMapping("/reports")
     public ResponseEntity<ApiResponse<FraudReportResponse>> createFraudReport(
             @Valid @RequestBody FraudReportRequest request) {
@@ -63,121 +74,73 @@ public class FraudDetectionController {
         FraudReportResponse response = fraudReportService.createFraudReport(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(
-                        ApiResponse.<FraudReportResponse>builder()
-                                .timestamp(LocalDateTime.now())
-                                .status(HttpStatus.CREATED.value())
-                                .success(true)
-                                .message("Fraud report created successfully.")
-                                .data(response)
-                                .build()
-                );
+                .body(ApiResponse.success(
+                        HttpStatus.CREATED,
+                        "Fraud report created successfully.",
+                        response
+                ));
     }
 
     @Operation(summary = "Get all fraud reports")
     @GetMapping("/reports")
     public ResponseEntity<ApiResponse<List<FraudReportResponse>>> getAllFraudReports() {
 
-        List<FraudReportResponse> response = fraudReportService.getAllFraudReports();
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<FraudReportResponse>>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Fraud reports retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Fraud reports retrieved successfully.",
+                fraudReportService.getAllFraudReports()
+        ));
     }
 
-    @Operation(summary = "Get fraud report by ID")
+    @Operation(summary = "Get a fraud report by ID")
     @GetMapping("/reports/{reportId}")
     public ResponseEntity<ApiResponse<FraudReportResponse>> getFraudReportById(
             @PathVariable UUID reportId) {
 
-        FraudReportResponse response = fraudReportService.getFraudReportById(reportId);
-
-        return ResponseEntity.ok(
-                ApiResponse.<FraudReportResponse>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Fraud report retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Fraud report retrieved successfully.",
+                fraudReportService.getFraudReportById(reportId)
+        ));
     }
 
     @Operation(summary = "Get all verification logs")
     @GetMapping("/logs")
     public ResponseEntity<ApiResponse<List<VerificationLogResponse>>> getAllVerificationLogs() {
 
-        List<VerificationLogResponse> response = verificationLogService.getAllVerificationLogs();
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<VerificationLogResponse>>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Verification logs retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Verification logs retrieved successfully.",
+                verificationLogService.getAllVerificationLogs()
+        ));
     }
 
-    @Operation(summary = "Get verification logs by product ID")
+    @Operation(summary = "Get verification logs for a product")
     @GetMapping("/logs/product/{productId}")
     public ResponseEntity<ApiResponse<List<VerificationLogResponse>>> getVerificationLogsByProductId(
             @PathVariable UUID productId) {
 
-        List<VerificationLogResponse> response =
-                verificationLogService.getVerificationLogsByProductId(productId);
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<VerificationLogResponse>>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Verification logs retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Verification logs retrieved successfully.",
+                verificationLogService.getVerificationLogsByProductId(productId)
+        ));
     }
 
     @Operation(summary = "Get all scan history")
     @GetMapping("/scans")
     public ResponseEntity<ApiResponse<List<ScanHistoryResponse>>> getAllScanHistory() {
 
-        List<ScanHistoryResponse> response = scanHistoryService.getAllScanHistory();
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<ScanHistoryResponse>>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Scan history retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Scan history retrieved successfully.",
+                scanHistoryService.getAllScanHistory()
+        ));
     }
 
-    @Operation(summary = "Get scan history by product ID")
+    @Operation(summary = "Get scan history for a product")
     @GetMapping("/scans/product/{productId}")
     public ResponseEntity<ApiResponse<List<ScanHistoryResponse>>> getScanHistoryByProductId(
             @PathVariable UUID productId) {
 
-        List<ScanHistoryResponse> response =
-                scanHistoryService.getScanHistoryByProductId(productId);
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<ScanHistoryResponse>>builder()
-                        .timestamp(LocalDateTime.now())
-                        .status(HttpStatus.OK.value())
-                        .success(true)
-                        .message("Scan history retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Scan history retrieved successfully.",
+                scanHistoryService.getScanHistoryByProductId(productId)
+        ));
     }
 }

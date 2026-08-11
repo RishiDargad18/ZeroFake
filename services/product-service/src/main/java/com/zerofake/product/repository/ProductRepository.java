@@ -11,10 +11,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     Optional<Product> findByProductCode(String productCode);
 
+    Optional<Product> findByIdAndActiveTrue(UUID id);
+
     boolean existsByProductCode(String productCode);
 
-    List<Product> findByCategoryId(UUID categoryId);
+    List<Product> findByCategoryIdAndActiveTrue(UUID categoryId);
 
-    List<Product> findByManufacturerId(UUID manufacturerId);
+    List<Product> findByManufacturerIdAndActiveTrue(UUID manufacturerId);
+
     List<Product> findByActiveTrue();
 }

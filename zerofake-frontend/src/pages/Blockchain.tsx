@@ -208,10 +208,13 @@ export default function Blockchain() {
                   <span className="text-xs text-gray-400 block">Transaction ID / Hash</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-blue-300 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
-                      {txResult.transactionId.slice(0, 8)}...{txResult.transactionId.slice(-8)}
+                      {txResult.transactionId
+                        ? `${txResult.transactionId.slice(0, 8)}...${txResult.transactionId.slice(-8)}`
+                        : "Not assigned"}
                     </span>
                     <button
-                      onClick={() => handleCopy(txResult.transactionId)}
+                      disabled={!txResult.transactionId}
+                      onClick={() => handleCopy(txResult.transactionId ?? "")}
                       className="text-gray-400 hover:text-white transition"
                       title="Copy Full Hash"
                     >
@@ -284,10 +287,13 @@ export default function Blockchain() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-400 w-24 shrink-0">Tx Hash:</span>
                       <span className="font-mono text-blue-300 bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                        {tx.transactionId.slice(0, 8)}...{tx.transactionId.slice(-8)}
+                        {tx.transactionId
+                          ? `${tx.transactionId.slice(0, 8)}...${tx.transactionId.slice(-8)}`
+                          : "Not assigned"}
                       </span>
                       <button
-                        onClick={() => handleCopy(tx.transactionId)}
+                        disabled={!tx.transactionId}
+                        onClick={() => handleCopy(tx.transactionId ?? "")}
                         className="text-gray-400 hover:text-white transition"
                         title="Copy Tx Hash"
                       >

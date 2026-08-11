@@ -192,7 +192,7 @@ export default function ProductTimeline() {
                     <div>
                       <span className="text-xs text-gray-400 uppercase tracking-wider">Blockchain Registry Status</span>
                       <div className="mt-1">
-                        <GlassBadge variant={productDetails.blockchainStatus === "SUCCESS" ? "success" : "warning"}>
+                        <GlassBadge variant={productDetails.blockchainStatus === "REGISTERED" ? "success" : "warning"}>
                           {productDetails.blockchainStatus}
                         </GlassBadge>
                       </div>

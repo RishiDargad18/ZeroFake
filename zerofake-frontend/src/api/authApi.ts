@@ -19,44 +19,36 @@ const api = createApiClient(
 const BASE_URL = "/api/v1/auth";
 
 export const authApi = {
-  async login(
-    request: LoginRequest
-  ) {
-    const response =
-      await api.post<AuthResponse>(
-        `${BASE_URL}/login`,
-        request
-      );
+  async login(request: LoginRequest) {
+    const response = await api.post<ApiResponse<AuthResponse>>(
+      `${BASE_URL}/login`,
+      request
+    );
 
     return response.data;
   },
 
-  async refreshToken(
-    request: RefreshTokenRequest
-  ) {
-    const response =
-      await api.post<TokenResponse>(
-        `${BASE_URL}/refresh`,
-        request
-      );
+  async refreshToken(request: RefreshTokenRequest) {
+    const response = await api.post<ApiResponse<TokenResponse>>(
+      `${BASE_URL}/refresh`,
+      request
+    );
 
     return response.data;
   },
 
   async logout() {
-    const response =
-      await api.post<ApiResponse<void>>(
-        `${BASE_URL}/logout`
-      );
+    const response = await api.post<ApiResponse<void>>(
+      `${BASE_URL}/logout`
+    );
 
     return response.data;
   },
 
   async getCurrentUser() {
-    const response =
-      await api.get<UserResponse>(
-        `${BASE_URL}/me`
-      );
+    const response = await api.get<ApiResponse<UserResponse>>(
+      `${BASE_URL}/me`
+    );
 
     return response.data;
   },
@@ -66,6 +58,7 @@ export const authApi = {
       `${BASE_URL}/register`,
       request
     );
+
     return response.data;
   },
 };

@@ -2,7 +2,6 @@ package com.zerofake.product.service;
 
 import com.zerofake.product.dto.request.CreateBatchRequest;
 import com.zerofake.product.dto.request.UpdateBatchRequest;
-import com.zerofake.product.dto.common.ApiResponse;
 import com.zerofake.product.dto.response.BatchResponse;
 
 import java.util.List;
@@ -18,8 +17,7 @@ public interface ProductBatchService {
 
     BatchResponse updateBatch(UUID id, UpdateBatchRequest request);
 
-    ApiResponse<Void> deleteBatch(UUID id);
+    void deleteBatch(UUID id);
 
     List<BatchResponse> getBatchesByProduct(UUID productId);
-
 }

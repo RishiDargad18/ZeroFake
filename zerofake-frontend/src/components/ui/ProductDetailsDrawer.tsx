@@ -296,7 +296,7 @@ export default function ProductDetailsDrawer({
                     <GlassBadge
                       variant={
                         product.blockchainStatus ===
-                        "SUCCESS"
+                        "REGISTERED"
                           ? "success"
                           : product.blockchainStatus ===
                             "FAILED"
@@ -342,7 +342,7 @@ export default function ProductDetailsDrawer({
               </GlassCard>
 
               <GlassCard className="mt-6">
-                {product.blockchainStatus === "SUCCESS" ? (
+                {product.blockchainStatus === "REGISTERED" ? (
                   <div className="flex flex-col items-center justify-center p-4 text-center">
                     <div className="bg-white p-4 rounded-2xl shadow-xl shadow-blue-500/5 border border-white/20">
                       <img
@@ -491,7 +491,7 @@ export default function ProductDetailsDrawer({
     p-6
   "
 >
-  {product.blockchainStatus === "SUCCESS" && (
+  {product.blockchainStatus === "REGISTERED" && (
     <GlassButton
       loading={isTransferring}
       disabled={isTransferring}

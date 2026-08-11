@@ -6,12 +6,21 @@ import com.zerofake.product.dto.request.UpdateBatchRequest;
 import com.zerofake.product.dto.response.BatchResponse;
 import com.zerofake.product.service.ProductBatchService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/batches")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 @Tag(
         name = "Batch Management",
         description = "APIs for managing product batches"
@@ -28,9 +38,10 @@ public class ProductBatchController {
     private final ProductBatchService productBatchService;
 
     @Operation(summary = "Create a new product batch")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+    @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Batch created successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Batch already exists")
     })
@@ -41,33 +52,25 @@ public class ProductBatchController {
         BatchResponse response = productBatchService.createBatch(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.<BatchResponse>builder()
-                        .success(true)
-                        .message("Batch created successfully.")
-                        .data(response)
-                        .build());
+                .body(ApiResponse.success(
+                        HttpStatus.CREATED,
+                        "Batch created successfully.",
+                        response
+                ));
     }
 
     @Operation(summary = "Retrieve all product batches")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Batches retrieved successfully")
-    })
     @GetMapping
     public ResponseEntity<ApiResponse<List<BatchResponse>>> getAllBatches() {
 
-        List<BatchResponse> response = productBatchService.getAllBatches();
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<BatchResponse>>builder()
-                        .success(true)
-                        .message("Batches retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Batches retrieved successfully.",
+                productBatchService.getAllBatches()
+        ));
     }
 
     @Operation(summary = "Retrieve a product batch by ID")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+    @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Batch retrieved successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Batch not found")
     })
@@ -75,68 +78,52 @@ public class ProductBatchController {
     public ResponseEntity<ApiResponse<BatchResponse>> getBatchById(
             @PathVariable UUID id) {
 
-        BatchResponse response = productBatchService.getBatchById(id);
-
-        return ResponseEntity.ok(
-                ApiResponse.<BatchResponse>builder()
-                        .success(true)
-                        .message("Batch retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Batch retrieved successfully.",
+                productBatchService.getBatchById(id)
+        ));
     }
 
     @Operation(summary = "Update a product batch")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+    @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Batch updated successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Batch or product not found"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Batch already exists")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Batch number already in use")
     })
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<BatchResponse>> updateBatch(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateBatchRequest request) {
 
-        BatchResponse response = productBatchService.updateBatch(id, request);
-
-        return ResponseEntity.ok(
-                ApiResponse.<BatchResponse>builder()
-                        .success(true)
-                        .message("Batch updated successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Batch updated successfully.",
+                productBatchService.updateBatch(id, request)
+        ));
     }
 
-    @Operation(summary = "Delete a product batch")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Batch deleted successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Batch not found")
-    })
+    @Operation(
+            summary = "Recall a product batch",
+            description = "Marks the batch as RECALLED. Manufacturing records are retained."
+    )
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteBatch(
             @PathVariable UUID id) {
 
-        return ResponseEntity.ok(productBatchService.deleteBatch(id));
+        productBatchService.deleteBatch(id);
+
+        return ResponseEntity.ok(ApiResponse.ok("Batch deleted successfully.", null));
     }
 
     @Operation(summary = "Retrieve batches by product")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Batches retrieved successfully")
-    })
     @GetMapping("/product/{productId}")
     public ResponseEntity<ApiResponse<List<BatchResponse>>> getBatchesByProduct(
             @PathVariable UUID productId) {
 
-        List<BatchResponse> response = productBatchService.getBatchesByProduct(productId);
-
-        return ResponseEntity.ok(
-                ApiResponse.<List<BatchResponse>>builder()
-                        .success(true)
-                        .message("Batches retrieved successfully.")
-                        .data(response)
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Batches retrieved successfully.",
+                productBatchService.getBatchesByProduct(productId)
+        ));
     }
 }

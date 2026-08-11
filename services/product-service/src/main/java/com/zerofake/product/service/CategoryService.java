@@ -2,7 +2,6 @@ package com.zerofake.product.service;
 
 import com.zerofake.product.dto.request.CreateCategoryRequest;
 import com.zerofake.product.dto.request.UpdateCategoryRequest;
-import com.zerofake.product.dto.common.ApiResponse;
 import com.zerofake.product.dto.response.CategoryResponse;
 
 import java.util.List;
@@ -18,6 +17,5 @@ public interface CategoryService {
 
     CategoryResponse updateCategory(UUID id, UpdateCategoryRequest request);
 
-    ApiResponse<Void> deleteCategory(UUID id);
-
+    void deleteCategory(UUID id);
 }

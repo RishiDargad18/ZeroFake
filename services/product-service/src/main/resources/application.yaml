@@ -3,18 +3,16 @@ spring:
     name: product-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/zerofake_product
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zerofake_product}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
-
-    show-sql: true
-
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
@@ -23,22 +21,40 @@ spring:
     time-zone: UTC
 
 server:
-  port: 8082
+  port: ${SERVER_PORT:8082}
 
 logging:
   level:
     org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:INFO}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
 
 springdoc:
   api-docs:
-    path: /api-docs
-
+    path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+zerofake:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  seed:
+    enabled: ${SEED_ENABLED:true}
+  qr:
+    # Directory where generated product QR code images are stored.
+    storage-directory: ${QR_STORAGE_DIRECTORY:./data/qr-codes}
+    image-size: ${QR_IMAGE_SIZE:300}
+
+jwt:
+  # Must match the authentication service exactly. This service validates
+  # tokens; it never issues them.
+  secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbi16ZXJvZmFrZS1obWFjLXNoYS1rZXktMjU2LWJpdHM=}
+  issuer: ${JWT_ISSUER:zerofake-auth-service}

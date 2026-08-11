@@ -19,7 +19,14 @@ import java.time.LocalDateTime;
 @Table(name = "refresh_tokens")
 public class RefreshToken extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 255)
+    /**
+     * The signed refresh token.
+     *
+     * <p>Sized well above the current token length: a JWT has no fixed upper
+     * bound, and it grows with every claim added. At 255 characters this column
+     * overflowed as soon as the identity claims were introduced.
+     */
+    @Column(nullable = false, unique = true, length = 1024)
     private String token;
 
     @OneToOne(fetch = FetchType.LAZY)

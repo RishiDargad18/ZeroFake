@@ -1,4 +1,5 @@
 package com.zerofake.auth.dto.request;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -9,9 +10,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class LoginRequest {
-    @NotBlank
-    @Email
+
+    @NotBlank(message = "Email is required.")
+    @Email(message = "A valid email address is required.")
     private String email;
-    @NotBlank
+
+    @NotBlank(message = "Password is required.")
     private String password;
 }

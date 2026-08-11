@@ -9,15 +9,12 @@ import java.util.UUID;
 
 public interface ScanHistoryRepository extends JpaRepository<ScanHistory, UUID> {
 
-    @Override
-    Optional<ScanHistory> findById(UUID id);
-
     List<ScanHistory> findByProductId(UUID productId);
+
+    /** Every successful prior scan of a product, which the fraud rules are evaluated against. */
+    List<ScanHistory> findByProductIdAndSuccessfulTrue(UUID productId);
 
     List<ScanHistory> findByUserId(UUID userId);
 
-    List<ScanHistory> findBySuccessful(Boolean successful);
-
     Optional<ScanHistory> findTopByProductIdAndSuccessfulTrueOrderByScannedAtDesc(UUID productId);
-
 }

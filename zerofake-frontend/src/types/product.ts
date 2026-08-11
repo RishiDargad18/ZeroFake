@@ -7,9 +7,15 @@ export interface CategoryResponse {
   updatedAt: string;
 }
 
+/**
+ * Whether a product's identity has been anchored on the blockchain.
+ *
+ * Promoted from PENDING to REGISTERED by the blockchain service once the
+ * on-chain registration transaction has committed.
+ */
 export type BlockchainStatus =
   | "PENDING"
-  | "SUCCESS"
+  | "REGISTERED"
   | "FAILED";
 
 export interface ProductResponse {

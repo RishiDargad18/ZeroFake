@@ -8,41 +8,54 @@ import type {
 } from "@/types/blockchain";
 
 class BlockchainService {
+  /**
+   * Anchors the product's identity on the ledger.
+   *
+   * The blockchain service also promotes the product to REGISTERED in the
+   * product catalogue, so the client does not need to follow up with a status
+   * update of its own.
+   */
   async registerProduct(
     request: RegisterProductRequest
   ): Promise<BlockchainTransactionResponse> {
-    return blockchainApi.registerProduct(
-      request
-    );
+    const response = await blockchainApi.registerProduct(request);
+    return response.data;
   }
+
   async getProductHistory(
-  productId: string
-): Promise<ProductHistoryResponse> {
-  return blockchainApi.getProductHistory(
-    productId
-  );
-}
+    productId: string
+  ): Promise<ProductHistoryResponse> {
+    const response = await blockchainApi.getProductHistory(productId);
+    return response.data;
+  }
 
   async transferOwnership(
     request: TransferOwnershipRequest
   ): Promise<BlockchainTransactionResponse> {
-    return blockchainApi.transferOwnership(
-      request
-    );
+    const response = await blockchainApi.transferOwnership(request);
+    return response.data;
   }
 
-  async getTransactionByTransactionId(transactionId: string): Promise<BlockchainTransactionResponse> {
-    return blockchainApi.getTransactionByTransactionId(transactionId);
+  async getTransactionByTransactionId(
+    transactionId: string
+  ): Promise<BlockchainTransactionResponse> {
+    const response =
+      await blockchainApi.getTransactionByTransactionId(transactionId);
+    return response.data;
   }
 
-  async getTransactionsByProductId(productId: string): Promise<BlockchainTransactionResponse[]> {
-    return blockchainApi.getTransactionsByProductId(productId);
+  async getTransactionsByProductId(
+    productId: string
+  ): Promise<BlockchainTransactionResponse[]> {
+    const response =
+      await blockchainApi.getTransactionsByProductId(productId);
+    return response.data ?? [];
   }
 
   async getAllTransactions(): Promise<BlockchainTransactionResponse[]> {
-    return blockchainApi.getAllTransactions();
+    const response = await blockchainApi.getAllTransactions();
+    return response.data ?? [];
   }
 }
 
-export const blockchainService =
-  new BlockchainService();
+export const blockchainService = new BlockchainService();

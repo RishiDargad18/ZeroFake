@@ -194,7 +194,7 @@ export default function FraudReportDetailsDrawer({
                         "RESOLVED"
                           ? "success"
                           : report.status ===
-                            "UNDER_INVESTIGATION"
+                            "UNDER_REVIEW"
                           ? "warning"
                           : "danger"
                       }

@@ -80,7 +80,7 @@ const columns: GlassTableColumn<FraudReportResponse>[] = [
           report.status === "RESOLVED"
             ? "success"
             : report.status ===
-              "UNDER_INVESTIGATION"
+              "UNDER_REVIEW"
             ? "warning"
             : "danger"
         }

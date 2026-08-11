@@ -1,15 +1,10 @@
-import {
-  useState,
-  useEffect,
-} from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 import { AnimatePresence, motion } from "framer-motion";
 
 import QrScanner from "@/components/verification/QrScanner";
 import { toast } from "react-hot-toast";
 import { Copy, Check } from "lucide-react";
-import { blockchainService } from "@/services/blockchainService";
 
 import { useVerification } from "@/hooks/useVerification";
 
@@ -19,7 +14,6 @@ import type {
   VerificationResponse,
   VerifyProductRequest,
 } from "@/types/verification";
-import type { OwnerRole } from "@/types/blockchain";
 
 import {
   GlassBadge,
@@ -30,34 +24,19 @@ import {
 } from "@/components/ui";
 
 export default function VerifyProduct() {
-  const { user } = useAuth();
   const {
     verifyProduct,
     isVerifying,
   } = useVerification();
 
+  // The scanning user is resolved from the access token by the backend, so
+  // only the scan context is sent from here.
   const [form, setForm] =
     useState<VerifyProductRequest>({
       productId: "",
-      userId: "",
-      userRole: "",
-      ipAddress: "",
-      deviceInfo: "",
-      location: "",
+      deviceInfo: navigator.userAgent || "Browser Client",
+      location: "Web Verification Terminal",
     });
-
-  useEffect(() => {
-    if (user) {
-      setForm((prev) => ({
-        ...prev,
-        userId: user.id || "",
-        userRole: user.role ? user.role.replace("ROLE_", "") : "",
-        ipAddress: prev.ipAddress || "127.0.0.1",
-        deviceInfo: prev.deviceInfo || navigator.userAgent || "Browser Client",
-        location: prev.location || "Local Verification Terminal",
-      }));
-    }
-  }, [user]);
 
   const [result, setResult] =
     useState<VerificationResponse | null>(
@@ -100,30 +79,18 @@ const [showScanner, setShowScanner] =
       });
 
       setResult(response);
-      toast.success("Product verified successfully.");
 
-      if (response.authentic && response.verificationResult === "GENUINE") {
-        toast.loading("Authentic product confirmed! Auto-transferring ownership to you on the ledger...", { id: "transfer" });
-        try {
-          // 1. Fetch current owner from blockchain history
-          const historyRes = await blockchainService.getProductHistory(pid);
-          let currentOwner = form.userId; // fallback
-          if (historyRes && historyRes.history && historyRes.history.length > 0) {
-            currentOwner = historyRes.history[historyRes.history.length - 1].currentOwnerId;
-          }
-
-          // 2. Perform transfer
-          await blockchainService.transferOwnership({
-            productId: pid,
-            fromOwnerId: currentOwner,
-            toOwnerId: form.userId,
-            toOwnerRole: (user?.role?.replace("ROLE_", "") || "CUSTOMER") as OwnerRole,
-          });
-          toast.success("Ownership auto-transferred successfully on the blockchain!", { id: "transfer" });
-        } catch (txErr) {
-          console.error("Auto-transfer transaction failed:", txErr);
-          toast.error("Verified as authentic, but blockchain ownership transfer failed: " + getApiError(txErr), { id: "transfer" });
-        }
+      // Verification is an inspection, not a custody event: it never moves
+      // ownership on the ledger. Transfers are performed explicitly from the
+      // Transfer Ownership page by the party handing the goods on.
+      if (response.verificationResult === "COUNTERFEIT") {
+        toast.error("This product failed verification.");
+      } else if (response.verificationResult === "SUSPICIOUS") {
+        toast("Product is authentic, but its scan history is unusual.", {
+          icon: "⚠️",
+        });
+      } else {
+        toast.success("Product verified as genuine.");
       }
     } catch (error) {
       toast.error(getApiError(error));

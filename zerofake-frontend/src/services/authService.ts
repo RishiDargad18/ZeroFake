@@ -11,18 +11,16 @@ import type {
 } from "@/types/auth";
 
 class AuthService {
-  async login(
-    request: LoginRequest
-  ): Promise<AuthResponse> {
-    return await authApi.login(request);
+  async login(request: LoginRequest): Promise<AuthResponse> {
+    const response = await authApi.login(request);
+    return response.data;
   }
 
   async refreshToken(
     request: RefreshTokenRequest
   ): Promise<TokenResponse> {
-    return await authApi.refreshToken(
-      request
-    );
+    const response = await authApi.refreshToken(request);
+    return response.data;
   }
 
   async logout(): Promise<void> {
@@ -30,14 +28,16 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<UserResponse> {
-    return await authApi.getCurrentUser();
+    const response = await authApi.getCurrentUser();
+    return response.data;
   }
 
-  async register(request: RegisterRequest): Promise<RegisterResponse> {
-    const apiResponse = await authApi.register(request);
-    return apiResponse.data;
+  async register(
+    request: RegisterRequest
+  ): Promise<RegisterResponse> {
+    const response = await authApi.register(request);
+    return response.data;
   }
 }
 
-export const authService =
-  new AuthService();
+export const authService = new AuthService();
