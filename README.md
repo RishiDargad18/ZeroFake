@@ -253,6 +253,8 @@ Only ports 80 and 443 are exposed; the browser talks to a single origin, so ther
 
 ## 📖 Documentation
 
+[**docs/DEMO.md**](docs/DEMO.md) — a rehearsed 8-minute walkthrough of the running system.
+
 [**docs/ZeroFake-Interview-Guide.pdf**](docs/ZeroFake-Interview-Guide.pdf) — a 38-page guide covering the architecture, every workflow end to end, the core concepts from first principles (JWT, Spring, JPA, blockchain, Hyperledger Fabric, Docker), the design decisions and their trade-offs, a security analysis, known limitations, and a question bank with model answers.
 
 Regenerate it after changing the content files with:
