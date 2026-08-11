@@ -143,6 +143,16 @@ Set `SEED_ENABLED=false` to disable seeding.
 
 Exercises the running stack over HTTP — login, RBAC refusals, catalogue writes, QR download, and the counterfeit verdict — asserting on real responses. Steps needing a live Fabric peer are reported as skipped, not passed, when the peer is unreachable.
 
+### Windows: enable long paths before cloning
+
+Java package directories are deep, and Windows caps paths at 260 characters by default. Clone into a short directory, or enable long path support once:
+
+```bash
+git config --global core.longpaths true
+```
+
+Without it, `git clone` fails part-way through checkout with `Filename too long`.
+
 ### Running the test suites
 
 ```bash
