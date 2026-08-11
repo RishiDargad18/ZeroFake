@@ -4,7 +4,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -43,16 +48,40 @@ public class ProductServiceClient {
     public ProductServiceClient(
             @Value("${product.service.url}") String productServiceUrl
     ) {
-        // An explicit request factory with bounded timeouts, rather than the
-        // auto-configured builder: this call happens immediately after a ledger
-        // write, so it must never hang and hold the request open.
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
-        requestFactory.setReadTimeout(READ_TIMEOUT);
+        // Apache HttpClient rather than the JDK's own clients, for two reasons
+        // that only surfaced when this was run against a live network:
+        //
+        //   - HttpURLConnection rejects PATCH outright ("Invalid HTTP method"),
+        //     and this endpoint is a partial update
+        //   - the JDK HttpClient fails to initialise on some Windows and JDK
+        //     combinations with "Unable to establish loopback connection"
+        //
+        // Timeouts are bounded because this call happens immediately after a
+        // ledger write and must never hang holding the request open.
+        PoolingHttpClientConnectionManager connectionManager =
+                new PoolingHttpClientConnectionManager();
+
+        connectionManager.setDefaultConnectionConfig(
+                ConnectionConfig.custom()
+                        .setConnectTimeout(java.util.concurrent.TimeUnit.MILLISECONDS
+                                .toMillis(CONNECT_TIMEOUT.toMillis()),
+                                java.util.concurrent.TimeUnit.MILLISECONDS)
+                        .build()
+        );
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(
+                        RequestConfig.custom()
+                                .setResponseTimeout(READ_TIMEOUT.toMillis(),
+                                        java.util.concurrent.TimeUnit.MILLISECONDS)
+                                .build()
+                )
+                .build();
 
         this.restClient = RestClient.builder()
                 .baseUrl(productServiceUrl)
-                .requestFactory(requestFactory)
+                .requestFactory(new HttpComponentsClientHttpRequestFactory(httpClient))
                 .build();
     }
 

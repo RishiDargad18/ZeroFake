@@ -120,10 +120,11 @@ A(("p",
    "**Chosen:** a static X.509 identity read from the network's crypto material, rather "
    "than certificate enrolment through Fabric CA with a managed wallet."))
 A(("p",
-   "**Why:** the demonstration network is a single organisation with one application "
-   "identity. Full CA enrolment &mdash; registering identities, enrolling them, storing "
-   "credentials in a wallet, handling renewal and revocation &mdash; is several days of "
-   "work that would demonstrate nothing this project does not already demonstrate."))
+   "**Why:** the application connects with one Org1 identity, and the network is "
+   "a demonstration network rather than a production one. Full CA enrolment "
+   "&mdash; registering identities, enrolling them, storing credentials in a wallet, "
+   "handling renewal and revocation &mdash; is several days of work that would "
+   "demonstrate nothing this project does not already demonstrate."))
 A(("p",
    "**Cost, stated plainly:** it does not scale to multiple organisations, offers no "
    "credential rotation, and would be unacceptable in production. **This is documented "
@@ -234,7 +235,7 @@ A(("part", "Part VII — Limitations and Future Work"))
 A(("h1", "7.1  What the system does not do"))
 A(("ul", [
     "**It cannot verify physical authenticity** &mdash; the oracle problem of section 5.9.",
-    "**It runs on a single-organisation Fabric network.** With one organisation there is only one endorser, which weakens the trust argument considerably; a real deployment needs the manufacturer, distributors and retailers as separate organisations so that no single party can write unilaterally.",
+    "**The two organisations are operated by one person on one machine.** The network does run Org1 and Org2, and the chaincode inherits the channel's `MAJORITY Endorsement` policy, so both must endorse every transaction &mdash; the mechanism is genuinely there. What is missing is *independence*: both organisations share one administrator and one host, so the trust distribution is demonstrated rather than real. Production would put the manufacturer, distributors and retailers in separately operated organisations.",
     "**`blockHash` is never populated**, because the Gateway client does not expose it. Capturing it requires a block event listener.",
     "**Fabric CA is not integrated**, per section 5.7.",
     "**No pagination.** Listing endpoints return every row, which will not survive a realistic catalogue.",
@@ -243,7 +244,7 @@ A(("ul", [
 
 A(("h1", "7.2  What to build next, in order"))
 A(("ol", [
-    "**A multi-organisation Fabric network.** This is the highest-value change by a distance, because a single-org blockchain is the weakest point in the entire argument for using one.",
+    "**Independently operated organisations.** Two organisations already endorse every transaction; the remaining gap is that one person administers both. Separating them is the highest-value change, because independence is what converts a demonstrated mechanism into a real trust guarantee.",
     "**Chaincode unit tests** using the Fabric test harness &mdash; the ownership validation logic deserves direct coverage.",
     "**Pagination and filtering** on all list endpoints.",
     "**Flyway migrations** replacing `ddl-auto`.",
@@ -377,7 +378,7 @@ A(("p", "**This is the single most important question in the viva.** A weak answ
 A(("ol", [
     "**\"With a database, the party that owns the database can rewrite history.\"** If the manufacturer hosts the audit log, then the manufacturer can silently alter it, and a distributor in a dispute has no reason to accept it as evidence. The ledger is replicated across organisations, so no single participant can rewrite it unilaterally.",
     "**\"Validation is enforced by every participant, not by my application server.\"** Ownership transfer rules live in chaincode that every endorsing peer re-executes independently. A compromised or buggy application server cannot write an invalid transfer, because the peers would reject it. In a database architecture, whoever controls the application controls the data.",
-    "**\"And I will be honest about the caveat.\"** In my current single-organisation network, that first argument is much weaker &mdash; one organisation means one endorser, so it is closer to a well-audited database than to a trust-distributing system. The multi-organisation network is the top item on my roadmap, precisely because it is what makes the blockchain argument real.",
+    "**\"And I will be honest about the caveat.\"** My network runs two organisations and the chaincode uses the channel's `MAJORITY Endorsement` policy, so both Org1 and Org2 must endorse every transaction &mdash; that second argument holds mechanically. What it does not yet have is *independence*: I administer both organisations on one machine, so nobody is actually checking my work. Separating the operators is what turns the demonstration into a guarantee, and it is a configuration change rather than an architectural one.",
 ]))
 A(("tip", "Why the concession makes the answer stronger",
    "Almost every student answers this question with \"immutability\" and stops. Naming the "
@@ -418,13 +419,16 @@ A(("p",
    "meaning &mdash; for example clearing it when a product is reported stolen or recalled, "
    "which is a genuinely useful feature.\""))
 
-A(("q", "Q. Is your network really decentralised with one organisation?"))
+A(("q", "Q. Is your network really decentralised?"))
 A(("p",
-   "\"No, and I would not claim it is. One organisation means one endorser and a single "
-   "administrative domain, so what I have demonstrates the mechanism rather than the "
-   "trust guarantee. The architecture is not the obstacle &mdash; the chaincode and gateway "
-   "code are unchanged for multiple organisations; it is a network configuration and "
-   "endorsement policy change. That is the first item on my roadmap.\""))
+   "\"Partly. It runs two organisations, and the chaincode inherits the channel's "
+   "`MAJORITY Endorsement` policy, so Org1 and Org2 both have to endorse every "
+   "transaction &mdash; I can show you the commit output, both approvals are there. "
+   "So the endorsement mechanism is real. What is not real is independence: I run "
+   "both organisations on one machine, so a dishonest me could still rewrite "
+   "everything. Genuine decentralisation needs separate operators, which is a "
+   "deployment change rather than a code change &mdash; the chaincode and gateway code "
+   "are already multi-organisation.\""))
 
 A(("q", "Q. What is an MVCC conflict in Fabric?"))
 A(("p",
@@ -522,10 +526,11 @@ A(("p",
 
 A(("q", "Q. What is the weakest part of your system?"))
 A(("p",
-   "\"The single-organisation Fabric network, because it undercuts the main reason to use "
-   "a blockchain. After that, the oracle problem &mdash; I cannot prove a physical object "
-   "matches its digital identity. Both are on my roadmap and the first is a network "
-   "configuration change rather than an architectural one.\""))
+   "\"That one administrator controls both Fabric organisations. Two organisations do "
+   "endorse every transaction, but since I operate both, the trust distribution is "
+   "demonstrated rather than guaranteed. After that, the oracle problem &mdash; I cannot "
+   "prove a physical object matches its digital identity. The first is a deployment "
+   "change; the second is not solvable in software at all.\""))
 
 A(("q", "Q. You did not write this alone, did you?"))
 A(("p",

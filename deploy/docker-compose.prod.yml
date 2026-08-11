@@ -120,6 +120,9 @@ services:
       # Fabric runs on the host, alongside this stack.
       FABRIC_PEER_ENDPOINT: ${FABRIC_PEER_ENDPOINT:-dns:///host.docker.internal:7051}
       FABRIC_PEER_HOST_ALIAS: ${FABRIC_PEER_HOST_ALIAS:-peer0.org1.example.com}
+    # See the note in docker-compose.yml: the bind-mounted Fabric credentials
+    # are owner-only by design, so this container runs as their owner.
+    user: "${FABRIC_RUN_AS:-1000:1000}"
     volumes:
       - ${FABRIC_CRYPTO_PATH:?FABRIC_CRYPTO_PATH must point at the Org1 crypto material}:/fabric:ro
     extra_hosts:

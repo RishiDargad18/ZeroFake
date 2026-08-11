@@ -107,6 +107,12 @@ services:
       FABRIC_CHAINCODE_NAME: ${FABRIC_CHAINCODE_NAME:-zerofake}
       FABRIC_PEER_ENDPOINT: ${FABRIC_PEER_ENDPOINT:-dns:///host.docker.internal:7051}
       FABRIC_PEER_HOST_ALIAS: ${FABRIC_PEER_HOST_ALIAS:-peer0.org1.example.com}
+    # Fabric credentials are bind-mounted from the host and are readable only
+    # by their owner: 0700 directories and a 0600 private key, which is correct
+    # for signing material and should not be loosened. This container therefore
+    # runs as that owner rather than as the image's own service user.
+    # Override with FABRIC_RUN_AS=<uid>:<gid> if yours differs from 1000:1000.
+    user: "${FABRIC_RUN_AS:-1000:1000}"
     volumes:
       # Org1 peer organisation directory from your Fabric network.
       - ${FABRIC_CRYPTO_PATH:-./fabric/organizations/peerOrganizations/org1.example.com}:/fabric:ro

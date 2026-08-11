@@ -1,0 +1,29 @@
+# Overlay for running against a Fabric test-network on the same Docker daemon.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.fabric.yml up -d
+#
+# The base compose file assumes Fabric is on the host and reaches it through
+# host.docker.internal. That works, but the TLS certificate is issued for
+# peer0.org1.example.com, so the client has to override the gRPC authority to
+# match.
+#
+# When the test-network runs on the same Docker daemon it is simpler and more
+# faithful to join its network and address the peer by its real hostname: the
+# TLS name then matches the connection with no override at all.
+#
+# Requires the test-network to be up, which creates the fabric_test network.
+
+services:
+
+  blockchain-service:
+    networks:
+      - zerofake
+      - fabric_test
+    environment:
+      # The peer's own container name, which is exactly what its TLS
+      # certificate is issued for.
+      FABRIC_PEER_ENDPOINT: dns:///peer0.org1.example.com:7051
+
+networks:
+  fabric_test:
+    external: true
